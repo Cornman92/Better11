@@ -10,7 +10,10 @@ Better11 is an all-around Windows 11 system enhancer that provides powerful tool
 - **Offline Image Editing**: Edit Windows installation images (WIM/ESD files) without booting
 - **Application Management**: Download and install applications with ease
 - **System Enhancement**: Various tools to improve and customize Windows 11 experience
-
+- **Driver Store Manager**: Import, export, download,install, and inject drivers into live and off-line Windows images
+- **BetterFiles**: AI assisted file and folder organization tool
+- **BetterExplorer**: A windows explorer 
+like application that takes all the best features from other file explorer applications and puts them all in one performance focused application
 ## Project Goals
 
 1. Provide a comprehensive toolkit for Windows 11 customization
