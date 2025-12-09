@@ -7,17 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned Features
-- Automatic application updates
-- Code signing verification for installers
-- Configuration file support (TOML/YAML)
-- Plugin system for extensibility
-- Web-based GUI alternative
-- Application catalog auto-update
-- Backup and restore system state
-- Performance profiling tools
-- Custom performance presets UI
-- Docker/container support for testing
+### In Development - v0.3.0
+
+#### Added
+- **Configuration System**: TOML/YAML configuration file support
+- **Base Classes**: SystemTool and RegistryTool base classes for consistency
+- **Common Interfaces**: Updatable, Configurable, Monitorable, Backupable interfaces
+- **Code Signing Verification**: Module stub for Authenticode signature verification
+- **Auto-Update System**: Framework for application and Better11 updates
+- **Windows Update Management**: Control Windows updates, pause/resume, active hours
+- **Privacy & Telemetry Control**: Comprehensive privacy settings management
+- **Startup Manager**: Manage startup programs from all locations
+- **Windows Features Manager**: Enable/disable Windows optional features
+
+#### Infrastructure
+- Requirements.txt with all dependencies for v0.3.0
+- Test stubs for all new modules (60+ tests planned)
+- Enhanced logging system foundation
+- Module structure for future features
+
+#### Documentation
+- ROADMAP_V0.3-V1.0.md: Comprehensive feature roadmap through v1.0
+- IMPLEMENTATION_PLAN_V0.3.0.md: Detailed 12-week implementation plan
+- Updated API documentation for new modules
+
+### Planned for Future Releases
+- Plugin system for extensibility (v0.5.0)
+- Web-based GUI alternative (v0.4.0)
+- Backup and restore system state (v0.4.0)
+- Performance profiling tools (v0.5.0)
+- Docker/container support for testing (v0.5.0)
+- Driver management (v0.4.0)
+- Network optimization (v0.4.0)
+- Firewall management (v0.4.0)
+- Power management (v0.4.0)
+- Remote management (v1.0.0)
 
 ## [0.2.0] - 2025-12-09
 
