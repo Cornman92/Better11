@@ -6,6 +6,13 @@
 
 An all-around Windows 11 system enhancement toolkit providing secure application management and system optimization tools.
 
+## Current Version
+
+**Version**: 0.3.0-dev (In Development)  
+**Status**: Infrastructure complete, implementation in progress
+
+See [ROADMAP_V0.3-V1.0.md](ROADMAP_V0.3-V1.0.md) for detailed feature roadmap and [IMPLEMENTATION_PLAN_V0.3.0.md](IMPLEMENTATION_PLAN_V0.3.0.md) for development plan.
+
 ## Features
 
 ### 🚀 Application Manager
@@ -139,13 +146,21 @@ apply_performance_preset(preset)
 
 ## Documentation
 
+### User Documentation
 - **[Installation Guide](INSTALL.md)** - Detailed setup instructions
 - **[User Guide](USER_GUIDE.md)** - Comprehensive usage documentation
+- **[Security](SECURITY.md)** - Security policies and reporting
+
+### Developer Documentation
 - **[API Reference](API_REFERENCE.md)** - Complete API documentation
 - **[Architecture](ARCHITECTURE.md)** - System design and architecture
 - **[Contributing](CONTRIBUTING.md)** - Development guidelines
-- **[Security](SECURITY.md)** - Security policies and reporting
 - **[Changelog](CHANGELOG.md)** - Version history and changes
+
+### Planning & Roadmap (v0.3.0+)
+- **[Roadmap v0.3-v1.0](ROADMAP_V0.3-V1.0.md)** - Feature roadmap through v1.0
+- **[Implementation Plan v0.3.0](IMPLEMENTATION_PLAN_V0.3.0.md)** - Detailed development plan
+- **[Setup Complete](SETUP_COMPLETE.md)** - Infrastructure setup summary
 
 ## Security Features
 
