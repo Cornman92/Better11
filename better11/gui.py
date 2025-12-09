@@ -67,12 +67,13 @@ class AppManagerGUI(tk.Tk):
 
     def _download_app(self, app_id: str) -> None:
         try:
-            destination = self.manager.download(app_id)
+            destination, cache_hit = self.manager.download(app_id)
         except DownloadError as exc:
             message = str(exc)
             self.after(0, lambda msg=message: messagebox.showerror("Download failed", msg))
             return
-        self.after(0, lambda: self._report(f"Downloaded {app_id} to {destination}"))
+        descriptor = "Cached" if cache_hit else "Downloaded"
+        self.after(0, lambda: self._report(f"{descriptor} {app_id} to {destination}"))
 
     def _install_selected(self) -> None:
         app_id = self._selected_app_id()
@@ -83,13 +84,31 @@ class AppManagerGUI(tk.Tk):
 
     def _install_app(self, app_id: str) -> None:
         try:
+            plan = self.manager.build_install_plan(app_id)
+        except KeyError as exc:
+            message = str(exc)
+            self.after(0, lambda msg=message: messagebox.showerror("Planning failed", msg))
+            return
+
+        if any(step.action == "blocked" for step in plan.steps):
+            warning = "\n".join(plan.warnings) if plan.warnings else "Installation blocked by dependency issues."
+            self.after(0, lambda msg=warning: messagebox.showerror("Installation blocked", msg))
+            return
+
+        if plan.warnings:
+            warning = "\n".join(plan.warnings)
+            self.after(0, lambda msg=warning: messagebox.showwarning("Plan warnings", msg))
+
+        try:
             status, result = self.manager.install(app_id)
         except (DownloadError, VerificationError, DependencyError) as exc:
             message = str(exc)
             self.after(0, lambda msg=message: messagebox.showerror("Installation failed", msg))
             return
         command = " ".join(result.command) if result.command else "already installed"
-        self.after(0, lambda: self._report(f"Installed {status.app_id} ({command})"))
+        dependency_chain = [step.app_id for step in plan.steps if step.app_id != app_id]
+        chain_text = ", ".join(dependency_chain) if dependency_chain else "no dependencies"
+        self.after(0, lambda: self._report(f"Installed {status.app_id} ({command}; plan: {chain_text})"))
 
     def _uninstall_selected(self) -> None:
         app_id = self._selected_app_id()
