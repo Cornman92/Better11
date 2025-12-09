@@ -56,28 +56,30 @@ class AppManager:
         if app_id in visited:
             raise DependencyError(f"Circular dependency detected at {app_id}")
         visited.add(app_id)
+        try:
+            app = self.catalog.get(app_id)
+            existing = self.state_store.get(app_id)
+            if existing and existing.installed and existing.version == app.version:
+                logger.info("%s is already installed (version %s)", app_id, app.version)
+                return existing, InstallerResult([], 0, "already installed", "")
 
-        app = self.catalog.get(app_id)
-        existing = self.state_store.get(app_id)
-        if existing and existing.installed and existing.version == app.version:
-            logger.info("%s is already installed (version %s)", app_id, app.version)
-            return existing, InstallerResult([], 0, "already installed", "")
+            dependency_statuses: Dict[str, AppStatus] = {}
+            for dependency_id in app.dependencies:
+                dep_status, _ = self._install_recursive(dependency_id, visited)
+                dependency_statuses[dependency_id] = dep_status
 
-        dependency_statuses: Dict[str, AppStatus] = {}
-        for dependency_id in app.dependencies:
-            dep_status, _ = self._install_recursive(dependency_id, visited)
-            dependency_statuses[dependency_id] = dep_status
-
-        installer_path = self.download(app_id)
-        self.verifier.verify(app, installer_path)
-        result = self.runner.install(app, installer_path)
-        status = self.state_store.mark_installed(
-            app.app_id,
-            app.version,
-            installer_path,
-            dependencies=list(dependency_statuses.keys()),
-        )
-        return status, result
+            installer_path = self.download(app_id)
+            self.verifier.verify(app, installer_path)
+            result = self.runner.install(app, installer_path)
+            status = self.state_store.mark_installed(
+                app.app_id,
+                app.version,
+                installer_path,
+                dependencies=list(dependency_statuses.keys()),
+            )
+            return status, result
+        finally:
+            visited.remove(app_id)
 
     def uninstall(self, app_id: str) -> InstallerResult:
         self._ensure_not_required_by_dependents(app_id)

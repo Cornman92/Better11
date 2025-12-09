@@ -7,7 +7,7 @@ from system_tools import configure_logging
 from system_tools.bloatware import remove_bloatware
 from system_tools.performance import PerformancePreset, apply_performance_preset
 from system_tools.registry import RegistryTweak, apply_tweaks
-from system_tools.safety import confirm_action
+from system_tools.safety import SafetyError, confirm_action, ensure_windows
 from system_tools.services import ServiceAction, apply_service_actions
 
 
@@ -18,6 +18,11 @@ class SafetyTests(unittest.TestCase):
         self.assertTrue(confirm_action("Proceed?", input_func=input_func))
         self.assertTrue(confirm_action("Proceed?", input_func=input_func))
         self.assertFalse(confirm_action("Proceed?", input_func=input_func))
+
+    @patch("system_tools.safety.platform.system", return_value="Linux")
+    def test_ensure_windows_rejects_non_windows(self, system_mock) -> None:
+        with self.assertRaises(SafetyError):
+            ensure_windows()
 
 
 class RegistryTests(unittest.TestCase):
@@ -64,6 +69,20 @@ class ServiceTests(unittest.TestCase):
             run_mock.assert_called_once()
             restore_mock.assert_called_once()
             ensure_mock.assert_called_once()
+
+    def test_service_action_command_variants(self) -> None:
+        self.assertEqual(ServiceAction(name="DiagTrack", action="start").command(), ["sc", "start", "DiagTrack"])
+        self.assertEqual(ServiceAction(name="DiagTrack", action="stop").command(), ["sc", "stop", "DiagTrack"])
+        self.assertEqual(
+            ServiceAction(name="DiagTrack", action="disable").command(),
+            ["sc", "config", "DiagTrack", "start=", "disabled"],
+        )
+        self.assertEqual(
+            ServiceAction(name="DiagTrack", action="enable").command(),
+            ["sc", "config", "DiagTrack", "start=", "auto"],
+        )
+        with self.assertRaises(ValueError):
+            ServiceAction(name="DiagTrack", action="noop").command()
 
 
 class BloatwareTests(unittest.TestCase):
