@@ -96,3 +96,5 @@ def test_main_dispatches_commands(tmp_path: Path, monkeypatch) -> None:
     assert exit_code == 0
     assert called["catalog"] == catalog
     assert called["manager"] == "manager"
+
+
