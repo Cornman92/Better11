@@ -45,9 +45,14 @@ class MediaCatalog:
 
             identifier = item.get("id")
             url = item.get("url")
-            if not identifier or not url:
+            missing_fields = [
+                field_name
+                for field_name, value in (("id", identifier), ("url", url))
+                if value in (None, "")
+            ]
+            if missing_fields:
                 raise ValueError(
-                    f"Item at index {index} is missing required fields 'id' and 'url'"
+                    f"Item at index {index} is missing required field(s): {', '.join(missing_fields)}"
                 )
 
             parsed_items.append(MediaItem(identifier=str(identifier), url=str(url)))

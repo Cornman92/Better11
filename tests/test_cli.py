@@ -19,7 +19,7 @@ def test_handle_fetch_media_missing_required_fields(capsys):
 
     captured = capsys.readouterr()
     assert exit_code == 1
-    assert "required fields" in captured.err
+    assert "missing required field(s): url" in captured.err
     assert "Traceback" not in captured.err
 
 
