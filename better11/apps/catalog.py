@@ -11,8 +11,9 @@ class AppCatalog:
     """Loads vetted application metadata from disk."""
 
     def __init__(self, applications: Iterable[AppMetadata]):
-        self._apps: Dict[str, AppMetadata] = {app.app_id: app for app in applications}
-        ensure_unique_ids(self._apps.values())
+        materialized: List[AppMetadata] = list(applications)
+        ensure_unique_ids(materialized)
+        self._apps: Dict[str, AppMetadata] = {app.app_id: app for app in materialized}
 
     @classmethod
     def from_file(cls, path: Path) -> "AppCatalog":
