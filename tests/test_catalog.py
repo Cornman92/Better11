@@ -30,3 +30,47 @@ def test_duplicate_app_ids_raise(catalog_writer, tmp_path: Path) -> None:
 
     with pytest.raises(ValueError):
         AppCatalog.from_file(catalog)
+
+
+def test_missing_required_field_raises(catalog_writer, tmp_path: Path) -> None:
+    entry = _catalog_entry(tmp_path, "missing")
+    entry.pop("uri")
+    catalog = catalog_writer([entry])
+
+    with pytest.raises(ValueError) as err:
+        AppCatalog.from_file(catalog)
+
+    assert "missing required field 'uri'" in str(err.value)
+
+
+def test_invalid_installer_type_raises(catalog_writer, tmp_path: Path) -> None:
+    entry = _catalog_entry(tmp_path, "badtype")
+    entry["installer_type"] = "pkg"
+    catalog = catalog_writer([entry])
+
+    with pytest.raises(ValueError) as err:
+        AppCatalog.from_file(catalog)
+
+    assert "Unsupported installer_type" in str(err.value)
+
+
+def test_signature_and_key_must_be_paired(catalog_writer, tmp_path: Path) -> None:
+    entry = _catalog_entry(tmp_path, "signed")
+    entry["signature"] = "abc"
+    catalog = catalog_writer([entry])
+
+    with pytest.raises(ValueError) as err:
+        AppCatalog.from_file(catalog)
+
+    assert "must provide both 'signature' and 'signature_key'" in str(err.value)
+
+
+def test_list_fields_require_strings(catalog_writer, tmp_path: Path) -> None:
+    entry = _catalog_entry(tmp_path, "lists")
+    entry["dependencies"] = ["dep1", 2]
+    catalog = catalog_writer([entry])
+
+    with pytest.raises(ValueError) as err:
+        AppCatalog.from_file(catalog)
+
+    assert "list of strings" in str(err.value)
