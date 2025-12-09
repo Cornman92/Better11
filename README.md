@@ -30,14 +30,51 @@ An all-around Windows 11 system enhancement toolkit providing secure application
 
 ### Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/better11.git
-cd better11
+Better11 is designed for Windows 11 and requires administrator privileges for system modifications.
 
-# Install dependencies (if any)
-pip install -r requirements.txt
-```
+#### Prerequisites
+
+Before installation, ensure you have:
+- **Supported OS**: Windows 11 (build 22621/22H2 or newer). Earlier builds may have limited DISM feature support.
+- **Python**: Version 3.8 or higher with pip
+- **PowerShell**: PowerShell 5.1+ (or PowerShell 7) with execution policy allowing local scripts
+- **DISM**: Deployment Image Servicing and Management available in the system PATH
+- **Permissions**: Administrator rights for system modifications
+- **Internet Access**: Required for downloading application installers
+- **Disk Space**: Several gigabytes of free space for mounting images and staging installers
+
+#### Installation Steps
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/yourusername/better11.git
+   cd better11
+   ```
+
+2. **Open PowerShell as Administrator**:
+   - Right-click on PowerShell
+   - Select "Run as Administrator"
+   - Navigate to the project directory
+
+3. **Configure PowerShell execution policy** (if needed):
+   ```powershell
+   Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+
+4. **Verify DISM availability**:
+   ```powershell
+   dism /?
+   ```
+
+5. **Review and unblock scripts** (if needed):
+   ```powershell
+   Get-ChildItem -Recurse | Unblock-File
+   ```
+
+6. **Install Python dependencies** (if any):
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ### Application Manager
 
@@ -124,9 +161,20 @@ Better11 takes security seriously:
 
 ## Requirements
 
-- **Operating System**: Windows 11 (some features may work on Windows 10)
-- **Python**: 3.8 or higher
+- **Operating System**: Windows 11 (build 22621/22H2 or newer recommended)
+- **Python**: 3.8 or higher with pip
+- **PowerShell**: 5.1+ or PowerShell 7
+- **DISM**: Available and accessible in system PATH
 - **Privileges**: Administrator rights required for system modifications
+- **Internet**: Required for downloading applications and updates
+- **Disk Space**: Several gigabytes recommended for operations
+
+### Windows Image Formats
+
+For offline image editing, Better11 supports:
+- **WIM** (Windows Imaging Format)
+- **ESD** (Electronic Software Download format)
+- **ISO** (Optical disc image files)
 
 ## Project Structure
 
@@ -189,13 +237,67 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Usage Notes
+
+### Live System Editing
+
+Run from an elevated PowerShell session to make changes to the currently running Windows installation:
+
+```powershell
+# Add a Windows capability live
+DISM /Online /Add-Capability /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0
+
+# Enable a Windows feature live
+DISM /Online /Enable-Feature /FeatureName:NetFx3 /All
+```
+
+### Offline Image Editing
+
+Mount a Windows image, apply changes, and commit them:
+
+```powershell
+# Mount the image
+$dismMount = "C:\Mount"
+$imagePath = "D:\sources\install.wim"
+DISM /Mount-WIM /WimFile:$imagePath /Index:1 /MountDir:$dismMount
+
+# Add packages, drivers, or registry tweaks to the mounted image
+DISM /Image:$dismMount /Add-Package /PackagePath:"D:\updates\kb.msu"
+DISM /Image:$dismMount /Add-Driver /Driver:"D:\drivers" /Recurse
+
+# Commit changes and unmount
+DISM /Unmount-WIM /MountDir:$dismMount /Commit
+```
+
+### Application Download and Install
+
+Use PowerShell to download and run installers with proper verification:
+
+```powershell
+# Download installer
+$installer = "C:\Temp\app-setup.exe"
+Invoke-WebRequest -Uri "https://example.com/app-setup.exe" -OutFile $installer
+
+# Verify checksum (optional but recommended)
+Get-FileHash $installer -Algorithm SHA256
+
+# Install silently if supported
+Start-Process -FilePath $installer -ArgumentList "/quiet" -Wait -Verb RunAs
+```
+
 ## Disclaimer
 
 ⚠️ **Important**: Better11 modifies system settings and installs software. While safety features are built-in:
-- Always create backups before using
-- Test in a virtual machine first
-- Review all operations before confirming
-- Use at your own risk
+
+### Safety Recommendations
+- **Back up first**: Create a system restore point or full image backup before modifying live systems
+- **Offline images**: Keep a copy of the original WIM/ESD before servicing; work on duplicates where possible
+- **Administrator context**: Running without elevation will cause many operations to fail or partially apply
+- **Disk space**: Mounting images and staging installers requires several gigabytes of free space
+- **Integrity**: Verify installer authenticity (hash/signature) and only use trusted download sources
+- **Test environment**: Test in a virtual machine first before applying to production systems
+- **Review operations**: Always review all operations before confirming
+- **Use at your own risk**: The authors are not responsible for any system damage or data loss
 
 ## Support
 
