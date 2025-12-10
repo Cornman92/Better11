@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Better11.WinUI.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <ScrollViewer>
+        <StackPanel Spacing="24">
+            <!-- Header -->
+            <TextBlock 
+                Text="Settings"
+                Style="{StaticResource TitleLargeTextBlockStyle}"/>
+
+            <!-- General Settings -->
+            <StackPanel Spacing="12">
+                <TextBlock 
+                    Text="General"
+                    Style="{StaticResource SubtitleTextBlockStyle}"/>
+                
+                <ToggleSwitch 
+                    Header="Auto-check for updates on startup"
+                    IsOn="True"/>
+                
+                <ToggleSwitch 
+                    Header="Show advanced options"
+                    IsOn="False"/>
+            </StackPanel>
+
+            <!-- Security Settings -->
+            <StackPanel Spacing="12">
+                <TextBlock 
+                    Text="Security"
+                    Style="{StaticResource SubtitleTextBlockStyle}"/>
+                
+                <ToggleSwitch 
+                    Header="Verify code signatures"
+                    IsOn="True"/>
+                
+                <ToggleSwitch 
+                    Header="Require signatures for installation"
+                    IsOn="False"/>
+                
+                <ToggleSwitch 
+                    Header="Always create restore points"
+                    IsOn="True"/>
+            </StackPanel>
+
+            <!-- Theme Settings -->
+            <StackPanel Spacing="12">
+                <TextBlock 
+                    Text="Appearance"
+                    Style="{StaticResource SubtitleTextBlockStyle}"/>
+                
+                <ComboBox Header="Theme" SelectedIndex="0" MinWidth="200">
+                    <ComboBoxItem Content="System Default"/>
+                    <ComboBoxItem Content="Light"/>
+                    <ComboBoxItem Content="Dark"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- About -->
+            <StackPanel Spacing="12">
+                <TextBlock 
+                    Text="About"
+                    Style="{StaticResource SubtitleTextBlockStyle}"/>
+                
+                <TextBlock Text="Better11 v0.3.0" Opacity="0.7"/>
+                <TextBlock Text="Windows 11 Enhancement Toolkit" Opacity="0.7"/>
+                <HyperlinkButton Content="View on GitHub" NavigateUri="https://github.com/yourusername/better11"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
