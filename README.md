@@ -96,6 +96,9 @@ python -m better11.cli install demo-app
 # Check installation status
 python -m better11.cli status
 
+# Plan an installation (preview dependencies)
+python -m better11.cli plan demo-appx
+
 # Uninstall an application
 python -m better11.cli uninstall demo-app
 
@@ -103,10 +106,15 @@ python -m better11.cli uninstall demo-app
 python -m better11.cli --catalog /path/to/catalog.json list
 ```
 
+The `plan` command previews the dependency order, highlights which entries are already installed, and warns if a dependency is missing or part of a cycle. This makes it easy to catch issues before invoking `install`.
+
+The download cache automatically reuses installers that are already present in `~/.better11/downloads` after verifying their SHA-256 hash. Cached hits are surfaced in both the CLI and GUI so you know when a fresh download was (or was not) required.
+
 #### GUI
 
+Start the Tkinter GUI with:
+
 ```bash
-# Launch the graphical interface
 python -m better11.gui
 ```
 

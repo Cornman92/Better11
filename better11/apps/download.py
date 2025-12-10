@@ -21,7 +21,7 @@ class AppDownloader:
         self.download_root.mkdir(parents=True, exist_ok=True)
         self.source_root = source_root or Path.cwd()
 
-    def _destination_for(self, app: AppMetadata) -> Path:
+    def destination_for(self, app: AppMetadata) -> Path:
         parsed = urllib.parse.urlparse(app.uri)
         filename = Path(parsed.path).name
         if not filename:
@@ -30,7 +30,7 @@ class AppDownloader:
 
     def download(self, app: AppMetadata, destination: Optional[Path] = None) -> Path:
         parsed = urllib.parse.urlparse(app.uri)
-        destination = destination or self._destination_for(app)
+        destination = destination or self.destination_for(app)
 
         if parsed.scheme in {"http", "https"}:
             hostname = parsed.hostname or ""
