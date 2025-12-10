@@ -5,12 +5,14 @@ enabled or disabled using DISM.
 """
 from __future__ import annotations
 
+import shutil
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
 
 from . import get_logger
 from .base import SystemTool, ToolMetadata
+from .safety import SafetyError, ensure_windows
 
 _LOGGER = get_logger(__name__)
 
@@ -100,8 +102,14 @@ class WindowsFeaturesManager(SystemTool):
     
     def validate_environment(self) -> None:
         """Validate DISM availability."""
-        # TODO: Check if DISM is available
-        pass
+        ensure_windows()
+
+        # Check if DISM is available
+        if shutil.which("dism") is None:
+            raise SafetyError(
+                "DISM (Deployment Image Servicing and Management) is not available. "
+                "This tool is required for managing Windows features."
+            )
     
     def execute(self) -> bool:
         """Execute default feature listing operation."""
