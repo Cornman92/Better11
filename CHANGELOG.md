@@ -7,29 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### In Development - v0.3.0
+## [0.3.0] - 2025-12-10
 
-#### Added
-- **Configuration System**: TOML/YAML configuration file support
-- **Base Classes**: SystemTool and RegistryTool base classes for consistency
-- **Common Interfaces**: Updatable, Configurable, Monitorable, Backupable interfaces
-- **Code Signing Verification**: Module stub for Authenticode signature verification
-- **Auto-Update System**: Framework for application and Better11 updates
-- **Windows Update Management**: Control Windows updates, pause/resume, active hours
-- **Privacy & Telemetry Control**: Comprehensive privacy settings management
-- **Startup Manager**: Manage startup programs from all locations
-- **Windows Features Manager**: Enable/disable Windows optional features
+### Added - Security & Automation Features
 
-#### Infrastructure
-- Requirements.txt with all dependencies for v0.3.0
-- Test stubs for all new modules (60+ tests planned)
-- Enhanced logging system foundation
-- Module structure for future features
+#### Code Signing Verification ✅
+- **Authenticode Signature Verification**: Full PowerShell-based signature verification
+- **Certificate Extraction**: Extract and validate certificate information
+- **Publisher Management**: Trusted publisher list management
+- **Integration**: Automatic signature verification in installer pipeline
+- **Status Detection**: VALID, INVALID, UNSIGNED, REVOKED, EXPIRED, UNTRUSTED
 
-#### Documentation
-- ROADMAP_V0.3-V1.0.md: Comprehensive feature roadmap through v1.0
-- IMPLEMENTATION_PLAN_V0.3.0.md: Detailed 12-week implementation plan
-- Updated API documentation for new modules
+#### Auto-Update System ✅
+- **Application Updates**: Check for and install application updates
+- **Version Comparison**: Semantic versioning support via `packaging` library
+- **Better11 Self-Update**: Check for and download Better11 updates
+- **Update Manifest**: Support for update metadata in catalog
+- **Remote Catalog**: Fetch latest catalog from URL
+- **Batch Updates**: Install all available updates at once
+
+#### Windows Update Management ✅
+- **Update Checking**: Check for available Windows updates (PowerShell + COM API)
+- **Update Installation**: Install specific or all available updates
+- **Pause/Resume**: Pause updates for up to 35 days
+- **Active Hours**: Configure active hours to prevent restart interruptions
+- **Update History**: View installation history (last N days)
+- **Update Uninstall**: Uninstall updates by KB article number
+
+#### Privacy & Telemetry Control ✅
+- **Telemetry Levels**: Set Windows telemetry level (Security/Basic/Enhanced/Full)
+- **App Permissions**: Manage 20+ app permission settings
+- **Advertising ID**: Disable Windows advertising ID
+- **Cortana Control**: Disable Cortana via group policy
+- **Privacy Presets**: Maximum Privacy and Balanced presets
+- **Preset Application**: Apply privacy presets with one command
+
+#### Startup Manager ✅
+- **Startup Listing**: List all startup items from registry and folders
+- **Enable/Disable**: Enable or disable startup items
+- **Remove Items**: Permanently remove startup items
+- **Locations**: Support for registry keys and startup folders
+- **Recommendations**: Get optimization recommendations based on startup items
+
+#### Windows Features Manager ✅
+- **Feature Listing**: List all Windows optional features via DISM
+- **Enable Features**: Enable Windows features (WSL, Hyper-V, etc.)
+- **Disable Features**: Disable unnecessary features
+- **Dependencies**: Get feature dependencies
+- **Feature Presets**: Developer and Minimal presets
+- **Preset Application**: Apply feature presets
+
+#### Configuration System ✅
+- **TOML/YAML Support**: Load and save configuration in TOML or YAML
+- **Environment Overrides**: Override config with environment variables
+- **Configuration Validation**: Validate configuration values
+- **Default Configuration**: Built-in defaults with user overrides
+
+### Infrastructure
+- **Base Classes**: SystemTool base class for all system tools
+- **Interfaces**: Updatable, Configurable, Monitorable, Backupable interfaces
+- **Enhanced Logging**: Structured logging with context
+- **Test Suite**: 87+ comprehensive tests for all new features
+
+### Documentation
+- **API Reference**: Complete API documentation for all new modules
+- **Implementation Guides**: Detailed implementation documentation
+- **Test Documentation**: Test suite documentation
+- **Status Tracking**: Implementation and testing status documents
+
+### Changed
+- **Verification Pipeline**: Enhanced with code signing verification
+- **Download Verifier**: Added code signing verification option
+- **Error Handling**: Improved error messages and handling
+
+### Technical Details
+- **PowerShell Integration**: Extensive use of PowerShell for Windows operations
+- **DISM Integration**: Windows Features management via DISM
+- **Registry Operations**: Comprehensive registry manipulation
+- **COM API**: Windows Update COM API integration
+- **Mocking Support**: Extensive test mocking for Windows APIs
 
 ### Planned for Future Releases
 - Plugin system for extensibility (v0.5.0)
