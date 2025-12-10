@@ -141,7 +141,7 @@ $tool = [MyTool]::new()
 $tool.Run()
 ```
 
-### ✅ System Tools - Implementations (Complete)
+### ✅ System Tools - Implementations (ALL COMPLETE! 🎉)
 
 #### SystemTools/StartupManager.psm1
 Comprehensive startup program management.
@@ -311,6 +311,126 @@ $results = $manager.ApplyAllPrivacySettings()
 - `cortana` - Voice assistant
 - `ui` - User interface suggestions
 - `search` - Search and web integration
+
+#### SystemTools/Features.psm1
+Windows optional features and capabilities management.
+
+```powershell
+# List recommendations
+Get-WindowsFeaturesRecommendations | Format-Table
+
+# Disable deprecated features
+Disable-WindowsFeature -FeatureName "SMB1Protocol"  # Security risk!
+Disable-WindowsFeature -FeatureName "Internet-Explorer-Optional-amd64"
+
+# Optimize all features
+Optimize-WindowsFeatures
+
+# Remove unnecessary capabilities
+Remove-UnnecessaryCapabilities
+
+# Using class
+$manager = [FeaturesManager]::new()
+$features = $manager.ListWindowsFeatures()
+$recommendations = $manager.GetRecommendations()
+```
+
+**Features**:
+- List all Windows optional features
+- Enable/disable features with restart detection
+- Windows capabilities management
+- Feature recommendations (IE11, SMB 1.0, XPS, etc.)
+- Safety checks and confirmations
+
+**Built-in Recommendations**:
+- Disable Internet Explorer 11 (deprecated)
+- Disable SMB 1.0/CIFS (security risk)
+- Disable Windows Media Player (rarely used)
+- Disable XPS Services (obsolete format)
+- Remove unnecessary capabilities
+
+#### SystemTools/Performance.psm1
+Windows performance optimization and tuning.
+
+```powershell
+# Apply performance presets
+Set-PerformancePreset -Preset Maximum     # Best performance
+Set-PerformancePreset -Preset Balanced    # Balance performance/appearance
+Set-PerformancePreset -Preset Quality     # Best appearance
+
+# Configure power plan
+Set-PowerConfiguration -Plan HighPerformance
+Get-CurrentPowerPlan
+
+# Optimize for SSD
+Optimize-SSD
+
+# List optimizations
+Get-PerformanceOptimizations
+Get-PerformanceOptimizations -Category visual
+
+# Using class
+$manager = [PerformanceManager]::new()
+$optimizations = $manager.ListOptimizations()
+$results = $manager.ApplyPreset([PerformancePreset]::Maximum)
+```
+
+**Performance Presets**:
+| Preset | Visual Effects | Disk Optimization | Expected Gain |
+|--------|---------------|-------------------|---------------|
+| Maximum | All disabled | All optimized | ~20% |
+| Balanced | Keep essential | High-impact only | ~10% |
+| Quality | All enabled | Minimal | ~5% |
+
+**Optimization Categories**:
+- `visual` - Animations, transparency, effects (5-10% gain)
+- `disk` - Search indexing, SuperFetch, hibernation (5-8% gain)
+- `system` - System responsiveness, priority control (5% gain)
+- `gaming` - Game Bar, DVR (3% gain)
+- `ui` - Windows tips, suggestions (2% gain)
+
+#### SystemTools/Updates.psm1
+Windows Update management and policies.
+
+```powershell
+# Set update policy
+Set-WindowsUpdatePolicy -Policy NotifyInstall
+Set-WindowsUpdatePolicy -Policy Automatic
+
+# Defer updates
+Set-UpdateDeferral -FeatureDays 30 -QualityDays 7
+
+# Pause updates temporarily
+Suspend-WindowsUpdates -Days 14
+Resume-WindowsUpdates
+
+# Disable automatic restart
+Disable-UpdateAutoRestart
+
+# Get current settings
+Get-UpdateDeferralSettings
+
+# Using class
+$manager = [UpdatesManager]::new()
+$manager.DeferUpdates(30, 7)
+$manager.PauseUpdates(7)
+$manager.DisableAutomaticRestart()
+```
+
+**Update Policies**:
+- `Automatic` - Download and install automatically (default)
+- `NotifyDownload` - Notify before downloading
+- `NotifyInstall` - Notify before installing
+- `Disabled` - Disable updates (NOT RECOMMENDED - security risk!)
+- `Metered` - Treat connection as metered to limit updates
+
+**Features**:
+- Defer feature updates (0-365 days)
+- Defer quality updates (0-30 days)
+- Pause all updates (1-35 days)
+- Control automatic restart
+- Disable driver updates
+- Metered connection configuration
 
 ---
 
