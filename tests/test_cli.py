@@ -98,3 +98,34 @@ def test_main_dispatches_commands(tmp_path: Path, monkeypatch) -> None:
     assert called["manager"] == "manager"
 
 
+def test_handle_fetch_media_with_malformed_json(capsys):
+    """Test error handling for malformed JSON in media catalog."""
+    exit_code = cli.handle_fetch_media("{invalid_json}")
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Failed to load media catalog" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_handle_fetch_media_missing_required_fields(capsys):
+    """Test error handling for media catalog with missing fields."""
+    import json
+    payload = json.dumps({"items": [{"id": "media-1"}]})
+
+    exit_code = cli.handle_fetch_media(payload)
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "missing required field(s): url" in captured.err
+    assert "Traceback" not in captured.err
+
+
+def test_handle_fetch_media_success():
+    """Test successful media catalog handling."""
+    import json
+    payload = json.dumps({"items": [{"id": "media-1", "url": "https://example.com"}]})
+
+    exit_code = cli.handle_fetch_media(payload)
+
+    assert exit_code == 0
