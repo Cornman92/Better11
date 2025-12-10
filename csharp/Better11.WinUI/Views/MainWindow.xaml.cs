@@ -36,10 +36,10 @@ namespace Better11.WinUI.Views
                         ContentFrame.Navigate(typeof(SystemToolsPage));
                         break;
                     case "windowsupdates":
-                        // ContentFrame.Navigate(typeof(WindowsUpdatesPage));
+                        ContentFrame.Navigate(typeof(WindowsUpdatesPage));
                         break;
                     case "privacy":
-                        // ContentFrame.Navigate(typeof(PrivacyPage));
+                        ContentFrame.Navigate(typeof(PrivacyPage));
                         break;
                     case "startup":
                         // ContentFrame.Navigate(typeof(StartupPage));

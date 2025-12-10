@@ -29,17 +29,23 @@ namespace Better11.WinUI
                     // Register core services
                     services.AddSingleton<PowerShellExecutor>();
                     services.AddSingleton<IAppManager, AppManagerService>();
+                    services.AddSingleton<ISystemToolsService, SystemToolsService>();
+                    services.AddSingleton<ISecurityService, SecurityService>();
 
                     // Register view models
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<ApplicationsViewModel>();
                     services.AddTransient<SystemToolsViewModel>();
+                    services.AddTransient<PrivacyViewModel>();
+                    services.AddTransient<WindowsUpdatesViewModel>();
                     services.AddTransient<SettingsViewModel>();
 
                     // Register views
                     services.AddTransient<MainWindow>();
                     services.AddTransient<ApplicationsPage>();
                     services.AddTransient<SystemToolsPage>();
+                    services.AddTransient<PrivacyPage>();
+                    services.AddTransient<WindowsUpdatesPage>();
                     services.AddTransient<SettingsPage>();
                 })
                 .Build();
