@@ -123,31 +123,108 @@ class PrivacyManager(SystemTool):
     
     def set_telemetry_level(self, level: TelemetryLevel) -> bool:
         """Set Windows telemetry level.
-        
+
         Parameters
         ----------
         level : TelemetryLevel
             Desired telemetry level
-        
+
         Returns
         -------
         bool
             True if successful
         """
         _LOGGER.info("Setting telemetry level to %s", level.name)
-        # TODO: Set registry key at HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
-        raise NotImplementedError("Telemetry control - coming in v0.3.0")
+
+        if self._dry_run:
+            _LOGGER.info("[DRY RUN] Would set telemetry level to %s", level.name)
+            return True
+
+        try:
+            import platform
+            if platform.system() != "Windows":
+                _LOGGER.error("Telemetry control only supported on Windows")
+                return False
+
+            import winreg
+
+            # Set telemetry level in group policy registry
+            key_path = r"SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+
+            try:
+                key = winreg.CreateKeyEx(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    key_path,
+                    0,
+                    winreg.KEY_WRITE
+                )
+
+                # AllowTelemetry value:
+                # 0 = Security (Enterprise only)
+                # 1 = Basic
+                # 2 = Enhanced
+                # 3 = Full
+                winreg.SetValueEx(key, "AllowTelemetry", 0, winreg.REG_DWORD, level.value)
+                winreg.CloseKey(key)
+
+                _LOGGER.info("Successfully set telemetry level to %s", level.name)
+                return True
+
+            except PermissionError:
+                _LOGGER.error("Insufficient permissions to set telemetry level. Run as administrator.")
+                return False
+
+        except Exception as exc:
+            _LOGGER.error("Failed to set telemetry level: %s", exc)
+            return False
     
     def get_telemetry_level(self) -> TelemetryLevel:
         """Get current Windows telemetry level.
-        
+
         Returns
         -------
         TelemetryLevel
             Current telemetry level
         """
-        # TODO: Read from registry
-        raise NotImplementedError("Get telemetry level - coming in v0.3.0")
+        try:
+            import platform
+            if platform.system() != "Windows":
+                _LOGGER.warning("Telemetry control only supported on Windows")
+                return TelemetryLevel.FULL  # Default assumption on non-Windows
+
+            import winreg
+
+            key_path = r"SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+
+            try:
+                key = winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    key_path,
+                    0,
+                    winreg.KEY_READ
+                )
+
+                value, _ = winreg.QueryValueEx(key, "AllowTelemetry")
+                winreg.CloseKey(key)
+
+                # Map registry value to enum
+                level_map = {
+                    0: TelemetryLevel.SECURITY,
+                    1: TelemetryLevel.BASIC,
+                    2: TelemetryLevel.ENHANCED,
+                    3: TelemetryLevel.FULL,
+                }
+
+                return level_map.get(value, TelemetryLevel.FULL)
+
+            except FileNotFoundError:
+                # Key doesn't exist, telemetry likely at default (Full)
+                _LOGGER.debug("Telemetry registry key not found, assuming FULL")
+                return TelemetryLevel.FULL
+
+        except Exception as exc:
+            _LOGGER.error("Failed to get telemetry level: %s", exc)
+            return TelemetryLevel.FULL  # Default assumption
     
     def set_app_permission(self, setting: PrivacySetting, enabled: bool) -> bool:
         """Set an app permission.
@@ -186,27 +263,99 @@ class PrivacyManager(SystemTool):
     
     def disable_advertising_id(self) -> bool:
         """Disable Windows advertising ID.
-        
+
         Returns
         -------
         bool
             True if successful
         """
         _LOGGER.info("Disabling advertising ID")
-        # TODO: Set registry key
-        raise NotImplementedError("Disable advertising ID - coming in v0.3.0")
+
+        if self._dry_run:
+            _LOGGER.info("[DRY RUN] Would disable advertising ID")
+            return True
+
+        try:
+            import platform
+            if platform.system() != "Windows":
+                _LOGGER.error("Advertising ID control only supported on Windows")
+                return False
+
+            import winreg
+
+            # Disable advertising ID in HKCU
+            key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
+
+            try:
+                key = winreg.CreateKeyEx(
+                    winreg.HKEY_CURRENT_USER,
+                    key_path,
+                    0,
+                    winreg.KEY_WRITE
+                )
+
+                # Set Enabled to 0 to disable
+                winreg.SetValueEx(key, "Enabled", 0, winreg.REG_DWORD, 0)
+                winreg.CloseKey(key)
+
+                _LOGGER.info("Successfully disabled advertising ID")
+                return True
+
+            except PermissionError:
+                _LOGGER.error("Insufficient permissions to disable advertising ID")
+                return False
+
+        except Exception as exc:
+            _LOGGER.error("Failed to disable advertising ID: %s", exc)
+            return False
     
     def disable_cortana(self) -> bool:
         """Disable Cortana.
-        
+
         Returns
         -------
         bool
             True if successful
         """
         _LOGGER.info("Disabling Cortana")
-        # TODO: Set group policy registry keys
-        raise NotImplementedError("Disable Cortana - coming in v0.3.0")
+
+        if self._dry_run:
+            _LOGGER.info("[DRY RUN] Would disable Cortana")
+            return True
+
+        try:
+            import platform
+            if platform.system() != "Windows":
+                _LOGGER.error("Cortana control only supported on Windows")
+                return False
+
+            import winreg
+
+            # Disable Cortana via group policy
+            key_path = r"SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+
+            try:
+                key = winreg.CreateKeyEx(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    key_path,
+                    0,
+                    winreg.KEY_WRITE
+                )
+
+                # Set AllowCortana to 0 to disable
+                winreg.SetValueEx(key, "AllowCortana", 0, winreg.REG_DWORD, 0)
+                winreg.CloseKey(key)
+
+                _LOGGER.info("Successfully disabled Cortana")
+                return True
+
+            except PermissionError:
+                _LOGGER.error("Insufficient permissions to disable Cortana. Run as administrator.")
+                return False
+
+        except Exception as exc:
+            _LOGGER.error("Failed to disable Cortana: %s", exc)
+            return False
     
     def apply_preset(self, preset: PrivacyPreset) -> bool:
         """Apply a privacy preset.

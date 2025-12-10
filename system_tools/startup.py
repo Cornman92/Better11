@@ -293,65 +293,297 @@ class StartupManager(SystemTool):
     
     def enable_startup_item(self, item: StartupItem) -> bool:
         """Enable a startup item.
-        
+
         Parameters
         ----------
         item : StartupItem
             Startup item to enable
-        
+
         Returns
         -------
         bool
             True if successful
         """
         _LOGGER.info("Enabling startup item: %s", item.name)
-        # TODO: Re-add to appropriate location
-        raise NotImplementedError("Enable startup item - coming in v0.3.0")
+
+        if self._dry_run:
+            _LOGGER.info("[DRY RUN] Would enable startup item: %s", item.name)
+            return True
+
+        try:
+            if item.location == StartupLocation.REGISTRY_HKLM_RUN:
+                return self._enable_registry_item(item, "HKLM")
+            elif item.location == StartupLocation.REGISTRY_HKCU_RUN:
+                return self._enable_registry_item(item, "HKCU")
+            elif item.location in (StartupLocation.STARTUP_FOLDER_COMMON, StartupLocation.STARTUP_FOLDER_USER):
+                _LOGGER.info("Startup folder items are always enabled if present")
+                return True
+            else:
+                _LOGGER.warning("Cannot enable items from location: %s", item.location)
+                return False
+        except Exception as exc:
+            _LOGGER.error("Failed to enable startup item %s: %s", item.name, exc)
+            return False
+
+    def _enable_registry_item(self, item: StartupItem, hive: str) -> bool:
+        """Enable a registry startup item by adding it back.
+
+        Parameters
+        ----------
+        item : StartupItem
+            Startup item to enable
+        hive : str
+            Registry hive (HKLM or HKCU)
+
+        Returns
+        -------
+        bool
+            True if successful
+        """
+        if platform.system() != "Windows":
+            _LOGGER.error("Registry operations only supported on Windows")
+            return False
+
+        try:
+            import winreg
+
+            key_path = STARTUP_REGISTRY_PATHS[hive]
+            root_key = winreg.HKEY_LOCAL_MACHINE if hive == "HKLM" else winreg.HKEY_CURRENT_USER
+
+            key = winreg.OpenKey(root_key, key_path, 0, winreg.KEY_WRITE)
+            winreg.SetValueEx(key, item.name, 0, winreg.REG_SZ, item.command)
+            winreg.CloseKey(key)
+
+            _LOGGER.info("Successfully enabled startup item in %s: %s", hive, item.name)
+            return True
+
+        except Exception as exc:
+            _LOGGER.error("Failed to enable registry startup item: %s", exc)
+            return False
     
     def disable_startup_item(self, item: StartupItem) -> bool:
         """Disable a startup item.
-        
+
         Parameters
         ----------
         item : StartupItem
             Startup item to disable
-        
+
         Returns
         -------
         bool
             True if successful
         """
         _LOGGER.info("Disabling startup item: %s", item.name)
-        # TODO: Remove from startup location
-        raise NotImplementedError("Disable startup item - coming in v0.3.0")
+
+        if self._dry_run:
+            _LOGGER.info("[DRY RUN] Would disable startup item: %s", item.name)
+            return True
+
+        try:
+            if item.location == StartupLocation.REGISTRY_HKLM_RUN:
+                return self._disable_registry_item(item, "HKLM")
+            elif item.location == StartupLocation.REGISTRY_HKCU_RUN:
+                return self._disable_registry_item(item, "HKCU")
+            elif item.location in (StartupLocation.STARTUP_FOLDER_COMMON, StartupLocation.STARTUP_FOLDER_USER):
+                _LOGGER.info("Disabling startup folder item by removing file")
+                return self.remove_startup_item(item)
+            else:
+                _LOGGER.warning("Cannot disable items from location: %s", item.location)
+                return False
+        except Exception as exc:
+            _LOGGER.error("Failed to disable startup item %s: %s", item.name, exc)
+            return False
+
+    def _disable_registry_item(self, item: StartupItem, hive: str) -> bool:
+        """Disable a registry startup item by removing it.
+
+        Parameters
+        ----------
+        item : StartupItem
+            Startup item to disable
+        hive : str
+            Registry hive (HKLM or HKCU)
+
+        Returns
+        -------
+        bool
+            True if successful
+        """
+        if platform.system() != "Windows":
+            _LOGGER.error("Registry operations only supported on Windows")
+            return False
+
+        try:
+            import winreg
+
+            key_path = STARTUP_REGISTRY_PATHS[hive]
+            root_key = winreg.HKEY_LOCAL_MACHINE if hive == "HKLM" else winreg.HKEY_CURRENT_USER
+
+            key = winreg.OpenKey(root_key, key_path, 0, winreg.KEY_WRITE)
+            try:
+                winreg.DeleteValue(key, item.name)
+                _LOGGER.info("Successfully disabled startup item in %s: %s", hive, item.name)
+                return True
+            finally:
+                winreg.CloseKey(key)
+
+        except FileNotFoundError:
+            _LOGGER.warning("Startup item not found in registry: %s", item.name)
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to disable registry startup item: %s", exc)
+            return False
     
     def remove_startup_item(self, item: StartupItem) -> bool:
         """Permanently remove a startup item.
-        
+
         Parameters
         ----------
         item : StartupItem
             Startup item to remove
-        
+
         Returns
         -------
         bool
             True if successful
         """
         _LOGGER.info("Removing startup item: %s", item.name)
-        # TODO: Delete from registry/folder/task scheduler
-        raise NotImplementedError("Remove startup item - coming in v0.3.0")
+
+        if self._dry_run:
+            _LOGGER.info("[DRY RUN] Would remove startup item: %s", item.name)
+            return True
+
+        try:
+            if item.location in (StartupLocation.REGISTRY_HKLM_RUN, StartupLocation.REGISTRY_HKCU_RUN):
+                return self.disable_startup_item(item)
+            elif item.location in (StartupLocation.STARTUP_FOLDER_COMMON, StartupLocation.STARTUP_FOLDER_USER):
+                return self._remove_startup_folder_item(item)
+            else:
+                _LOGGER.warning("Cannot remove items from location: %s", item.location)
+                return False
+        except Exception as exc:
+            _LOGGER.error("Failed to remove startup item %s: %s", item.name, exc)
+            return False
+
+    def _remove_startup_folder_item(self, item: StartupItem) -> bool:
+        """Remove a startup folder item by deleting the file.
+
+        Parameters
+        ----------
+        item : StartupItem
+            Startup item to remove
+
+        Returns
+        -------
+        bool
+            True if successful
+        """
+        if platform.system() != "Windows":
+            _LOGGER.error("Startup folder operations only supported on Windows")
+            return False
+
+        try:
+            file_path = Path(item.command)
+            if file_path.exists():
+                file_path.unlink()
+                _LOGGER.info("Successfully removed startup folder item: %s", item.name)
+                return True
+            else:
+                _LOGGER.warning("Startup folder item not found: %s", item.command)
+                return False
+        except Exception as exc:
+            _LOGGER.error("Failed to remove startup folder item: %s", exc)
+            return False
     
     def get_recommendations(self) -> List[str]:
         """Get startup optimization recommendations.
-        
+
         Returns
         -------
         List[str]
             List of optimization recommendations
         """
-        # TODO: Analyze startup items and provide recommendations
-        raise NotImplementedError("Startup recommendations - coming in v0.3.0")
+        recommendations = []
+
+        try:
+            items = self.list_startup_items()
+
+            if not items:
+                recommendations.append("No startup items found to optimize")
+                return recommendations
+
+            # Count items by location
+            registry_items = [i for i in items if i.location in (
+                StartupLocation.REGISTRY_HKLM_RUN,
+                StartupLocation.REGISTRY_HKCU_RUN
+            )]
+            folder_items = [i for i in items if i.location in (
+                StartupLocation.STARTUP_FOLDER_COMMON,
+                StartupLocation.STARTUP_FOLDER_USER
+            )]
+
+            total_items = len(items)
+
+            # Provide recommendations based on number of items
+            if total_items > 15:
+                recommendations.append(
+                    f"You have {total_items} startup items, which may slow down boot time. "
+                    "Consider disabling unnecessary items."
+                )
+            elif total_items > 10:
+                recommendations.append(
+                    f"You have {total_items} startup items. Review and disable any that aren't essential."
+                )
+            else:
+                recommendations.append(
+                    f"You have {total_items} startup items, which is reasonable."
+                )
+
+            # Check for duplicate locations
+            if registry_items:
+                recommendations.append(
+                    f"Found {len(registry_items)} registry startup items. "
+                    "These start automatically with Windows."
+                )
+
+            if folder_items:
+                recommendations.append(
+                    f"Found {len(folder_items)} startup folder items. "
+                    "Consider moving these to registry for better control."
+                )
+
+            # Common items that can usually be disabled
+            common_safe_to_disable = [
+                "OneDrive", "Skype", "Teams", "Spotify", "iTunes",
+                "Discord", "Steam", "Epic", "Adobe", "Dropbox"
+            ]
+
+            potentially_safe = []
+            for item in items:
+                for safe_name in common_safe_to_disable:
+                    if safe_name.lower() in item.name.lower() or safe_name.lower() in item.command.lower():
+                        potentially_safe.append(item.name)
+                        break
+
+            if potentially_safe:
+                recommendations.append(
+                    "The following items can usually be started manually when needed: "
+                    + ", ".join(potentially_safe)
+                )
+
+            # Check for high impact items
+            high_impact = [i for i in items if i.impact == StartupImpact.HIGH]
+            if high_impact:
+                recommendations.append(
+                    f"Found {len(high_impact)} high-impact startup items that may slow boot time"
+                )
+
+            return recommendations
+
+        except Exception as exc:
+            _LOGGER.error("Failed to generate recommendations: %s", exc)
+            return ["Unable to generate recommendations due to an error"]
 
 
 __all__ = [
