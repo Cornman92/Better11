@@ -104,6 +104,61 @@ python -m better11.cli uninstall demo-app
 python -m better11.cli --catalog /path/to/catalog.json list
 ```
 
+#### Media catalog and deployment helpers
+
+Media required for deployments (drivers, cumulative updates, and application installers) can be described in a JSON catalog and pre-staged for offline environments. Each entry captures a source URL, optional SHA-256 checksum, target path within the shared repository, and an install type (`driver`, `update`, or `application`).
+
+```json
+{
+  "drivers": [
+    {
+      "id": "gpu",
+      "source": "https://example.com/drivers/gpu.exe",
+      "target": "drivers/gpu.exe",
+      "checksum": "<sha256>",
+      "install_type": "driver"
+    }
+  ],
+  "updates": [
+    {
+      "id": "kb5030211",
+      "source": "https://example.com/updates/kb5030211.msu",
+      "target": "updates/kb5030211.msu",
+      "install_type": "update"
+    }
+  ],
+  "applications": [
+    {
+      "id": "winget",
+      "source": "https://example.com/apps/winget.msixbundle",
+      "target": "apps/winget.msixbundle",
+      "checksum": "<sha256>",
+      "install_type": "application"
+    }
+  ]
+}
+```
+
+Validate or fetch media using the deploy helper:
+
+```bash
+# Validate catalog structure
+python -m better11.media_cli validate ./catalog.json
+
+# Download media into a shared repository (checksums enforced by default)
+python -m better11.media_cli fetch-media ./catalog.json ./media-repository
+
+# Skip checksum verification when mirroring from a trusted staging cache
+python -m better11.media_cli fetch-media ./catalog.json ./media-repository --skip-checksums
+```
+
+To pre-stage media for offline deployments:
+
+1. Author or export a catalog on a connected machine.
+2. Run `fetch-media` to populate a repository directory with all referenced installers, drivers, and updates.
+3. Transfer the repository to the offline environment (e.g., removable drive or network share).
+4. Point deployment scripts at the staged repository to reuse the verified binaries without re-downloading them.
+
 #### GUI
 
 ```bash

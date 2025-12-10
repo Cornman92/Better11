@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field, asdict
+import platform
 from pathlib import Path
 from typing import Optional, Any, Dict
 
@@ -279,10 +280,10 @@ class Config:
         Path
             System configuration file path (C:\\ProgramData\\Better11\\config.toml on Windows)
         """
-        if os.name == 'nt':
+        if platform.system().lower() == "windows":
             return Path(os.environ.get('PROGRAMDATA', 'C:\\ProgramData')) / "Better11" / "config.toml"
-        else:
-            return Path("/etc/better11/config.toml")
+
+        return Path("/etc/better11/config.toml")
     
     def validate(self) -> bool:
         """Validate configuration values.

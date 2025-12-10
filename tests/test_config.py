@@ -190,9 +190,9 @@ class TestConfig:
     
     def test_system_path_windows(self, monkeypatch):
         """Test system configuration path on Windows."""
-        monkeypatch.setattr('os.name', 'nt')
+        monkeypatch.setattr('better11.config.platform.system', lambda: 'Windows')
         monkeypatch.setenv('PROGRAMDATA', 'C:\\ProgramData')
-        
+
         path = Config.get_system_path()
         assert 'ProgramData' in str(path)
         assert 'Better11' in str(path)
