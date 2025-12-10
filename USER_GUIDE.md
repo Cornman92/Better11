@@ -569,6 +569,265 @@ backup_path = backup_registry_key(
 print(f"Registry backed up to: {backup_path}")
 ```
 
+## New Features in v0.3.0
+
+### Code Signing Verification
+
+Better11 now automatically verifies digital signatures on all installers to ensure software integrity.
+
+**Automatic Verification:**
+- All downloaded installers are checked for Authenticode signatures
+- Unsigned files generate warnings (configurable to block)
+- Certificate information is displayed for signed files
+
+**Example:**
+```python
+from better11.apps.code_signing import CodeSigningVerifier
+from pathlib import Path
+
+verifier = CodeSigningVerifier()
+sig_info = verifier.verify_signature(Path("installer.exe"))
+
+if sig_info.is_trusted():
+    print(f"Publisher: {sig_info.certificate.subject}")
+else:
+    print(f"Warning: {sig_info.status.value}")
+```
+
+### Auto-Update System
+
+Keep your applications and Better11 itself up to date automatically.
+
+**Check for Updates:**
+```python
+from better11.apps.updater import ApplicationUpdater
+from better11.apps.manager import AppManager
+
+manager = AppManager(Path("catalog.json"))
+updater = ApplicationUpdater(manager)
+
+# Check all installed apps
+updates = updater.check_for_updates()
+for update in updates:
+    print(f"{update.app_id}: {update.current_version} -> {update.available_version}")
+
+# Install all updates
+updater.install_all_updates(updates)
+```
+
+**Better11 Self-Update:**
+```python
+from better11.apps.updater import Better11Updater
+
+updater = Better11Updater()
+update_info = updater.check_for_updates()
+
+if update_info:
+    print(f"Update available: {update_info.available_version}")
+    package = updater.download_update(update_info.available_version)
+    # Install requires restart
+```
+
+### Windows Update Management
+
+Control Windows Update behavior to suit your needs.
+
+**Check for Updates:**
+```python
+from system_tools.updates import WindowsUpdateManager
+
+manager = WindowsUpdateManager()
+updates = manager.check_for_updates()
+
+print(f"Found {len(updates)} available updates")
+for update in updates:
+    print(f"  {update.title} ({update.size_mb} MB)")
+```
+
+**Pause Updates:**
+```python
+# Pause updates for 7 days
+manager.pause_updates(days=7)
+
+# Resume updates
+manager.resume_updates()
+```
+
+**Set Active Hours:**
+```python
+# Prevent restarts between 9 AM and 5 PM
+manager.set_active_hours(start_hour=9, end_hour=17)
+```
+
+**Install Updates:**
+```python
+# Install all available updates
+manager.install_updates()
+
+# Install specific updates
+manager.install_updates(update_ids=["update-123", "update-456"])
+```
+
+**View Update History:**
+```python
+history = manager.get_update_history(days=30)
+for update in history:
+    print(f"{update.title} - Installed: {update.install_date}")
+```
+
+### Privacy & Telemetry Control
+
+Comprehensive control over Windows privacy settings.
+
+**Set Telemetry Level:**
+```python
+from system_tools.privacy import PrivacyManager, TelemetryLevel
+
+manager = PrivacyManager()
+manager.set_telemetry_level(TelemetryLevel.BASIC)
+```
+
+**Manage App Permissions:**
+```python
+from system_tools.privacy import PrivacySetting
+
+# Disable location access
+manager.set_app_permission(PrivacySetting.LOCATION, False)
+
+# Disable camera access
+manager.set_app_permission(PrivacySetting.CAMERA, False)
+```
+
+**Apply Privacy Presets:**
+```python
+# Maximum privacy - disable everything
+manager.apply_preset(PrivacyManager.MAXIMUM_PRIVACY)
+
+# Balanced - reasonable defaults
+manager.apply_preset(PrivacyManager.BALANCED)
+```
+
+**Disable Advertising ID:**
+```python
+manager.disable_advertising_id()
+```
+
+**Disable Cortana:**
+```python
+manager.disable_cortana()
+```
+
+### Startup Manager
+
+Optimize boot time by managing startup programs.
+
+**List Startup Items:**
+```python
+from system_tools.startup import StartupManager
+
+manager = StartupManager()
+items = manager.list_startup_items()
+
+for item in items:
+    print(f"{item.name}: {item.command}")
+    print(f"  Location: {item.location.value}")
+    print(f"  Impact: {item.impact.value}")
+```
+
+**Disable Startup Items:**
+```python
+# Find item to disable
+item = next(i for i in items if i.name == "UnnecessaryApp")
+
+# Disable it
+manager.disable_startup_item(item)
+```
+
+**Get Recommendations:**
+```python
+recommendations = manager.get_recommendations()
+for rec in recommendations:
+    print(rec)
+```
+
+### Windows Features Manager
+
+Enable or disable Windows optional features.
+
+**List Features:**
+```python
+from system_tools.features import WindowsFeaturesManager, FeatureState
+
+manager = WindowsFeaturesManager()
+
+# List all features
+all_features = manager.list_features()
+
+# List only enabled features
+enabled = manager.list_features(FeatureState.ENABLED)
+
+for feature in enabled:
+    print(f"{feature.display_name}: {feature.state.value}")
+```
+
+**Enable Features:**
+```python
+# Enable WSL
+manager.enable_feature("Microsoft-Windows-Subsystem-Linux")
+
+# Enable Hyper-V
+manager.enable_feature("Microsoft-Hyper-V-All")
+```
+
+**Apply Feature Presets:**
+```python
+# Developer preset - enables WSL, Hyper-V, Containers, etc.
+manager.apply_preset(WindowsFeaturesManager.DEVELOPER_PRESET)
+
+# Minimal preset - disables unnecessary features
+manager.apply_preset(WindowsFeaturesManager.MINIMAL_PRESET)
+```
+
+**Check Feature Dependencies:**
+```python
+deps = manager.get_feature_dependencies("VirtualMachinePlatform")
+print(f"Dependencies: {deps}")
+```
+
+### Configuration Management
+
+Better11 now supports configuration files for persistent settings.
+
+**Load Configuration:**
+```python
+from better11.config import Config
+
+config = Config.load()
+print(f"Auto-update: {config.better11.auto_update}")
+print(f"Telemetry: {config.better11.telemetry_enabled}")
+```
+
+**Save Configuration:**
+```python
+config.better11.auto_update = True
+config.applications.verify_signatures = True
+config.system_tools.always_create_restore_point = True
+config.save()
+```
+
+**Configuration File Location:**
+- Default: `~/.better11/config.toml`
+- System-wide: `C:\ProgramData\Better11\config.toml` (Windows)
+
+**Environment Variables:**
+```bash
+# Override config values
+export BETTER11_AUTO_UPDATE=false
+export BETTER11_LOG_LEVEL=DEBUG
+```
+
+---
+
 ## Advanced Usage
 
 ### Scripting and Automation

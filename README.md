@@ -8,10 +8,10 @@ An all-around Windows 11 system enhancement toolkit providing secure application
 
 ## Current Version
 
-**Version**: 0.3.0-dev (In Development)  
-**Status**: Infrastructure complete, implementation in progress
+**Version**: 0.3.0 (Released)  
+**Status**: ✅ Feature complete, production ready
 
-See [ROADMAP_V0.3-V1.0.md](ROADMAP_V0.3-V1.0.md) for detailed feature roadmap and [IMPLEMENTATION_PLAN_V0.3.0.md](IMPLEMENTATION_PLAN_V0.3.0.md) for development plan.
+See [V0.3.0_RELEASE_NOTES.md](V0.3.0_RELEASE_NOTES.md) for what's new in v0.3.0 and [ROADMAP_V0.3-V1.0.md](ROADMAP_V0.3-V1.0.md) for future plans.
 
 ## Features
 
@@ -27,6 +27,10 @@ See [ROADMAP_V0.3-V1.0.md](ROADMAP_V0.3-V1.0.md) for detailed feature roadmap an
 - **Bloatware Removal**: Remove unwanted AppX packages safely
 - **Service Management**: Control Windows services (start, stop, enable, disable)
 - **Performance Presets**: Apply curated performance optimization profiles
+- **Windows Update Management**: Control when and how Windows updates (NEW in v0.3.0)
+- **Privacy Controls**: Comprehensive telemetry and privacy settings management (NEW in v0.3.0)
+- **Startup Manager**: Optimize boot time by managing startup programs (NEW in v0.3.0)
+- **Windows Features**: Enable/disable Windows optional features (NEW in v0.3.0)
 - **Safety Features**: Automatic restore point creation and registry backups
 
 ### 🖥️ Interfaces
@@ -166,9 +170,11 @@ apply_performance_preset(preset)
 
 Better11 takes security seriously:
 
+- ✅ **Code Signing Verification**: Authenticode signature verification for all installers (NEW in v0.3.0)
 - ✅ **Hash Verification**: SHA-256 hash checking for all downloads
 - ✅ **HMAC Signatures**: Optional HMAC-SHA256 signature verification
 - ✅ **Domain Vetting**: Only download from pre-approved domains
+- ✅ **Auto-Updates**: Automatic application and Better11 updates (NEW in v0.3.0)
 - ✅ **Restore Points**: Automatic system restore point creation
 - ✅ **Registry Backup**: Automatic backup before registry modifications
 - ✅ **User Confirmation**: Interactive prompts for destructive operations
