@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Better11.PowerShell</RootNamespace>
+    <AssemblyName>Better11.PowerShell</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Authors>Better11 Contributors</Authors>
+    <Company>Better11</Company>
+    <Product>Better11</Product>
+    <Description>PowerShell module and cmdlets for Better11</Description>
+    <Copyright>Copyright © 2025 Better11</Copyright>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Better11.Core\Better11.Core.csproj" />
+    <ProjectReference Include="..\Better11.Services\Better11.Services.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.0" />
+    <PackageReference Include="System.Management.Automation" Version="7.4.0" />
+  </ItemGroup>
+
+</Project>
