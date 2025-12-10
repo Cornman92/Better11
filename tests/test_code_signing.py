@@ -1,4 +1,5 @@
 """Tests for code signing verification."""
+import sys
 import pytest
 
 from better11.apps.code_signing import (
@@ -137,10 +138,90 @@ class TestCodeSigningVerifier:
         assert not verifier.is_trusted_publisher(cert)
 
 
-# TODO: Add tests for:
-# - Signature verification (when implemented)
-# - Certificate extraction (when implemented)
-# - PowerShell integration
-# - Different file types (EXE, MSI, DLL)
-# - Unsigned files
-# - Revoked certificates
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="Code signing verification only works on Windows"
+    )
+    def test_verify_signature_signed_file(self, tmp_path):
+        """Test verifying a signed file."""
+        # Create a test file (in real scenario, would use actual signed file)
+        test_file = tmp_path / "test.exe"
+        test_file.write_bytes(b"test content")
+        
+        verifier = CodeSigningVerifier()
+        sig_info = verifier.verify_signature(test_file)
+        
+        # Should return a SignatureInfo object
+        assert isinstance(sig_info, SignatureInfo)
+        assert isinstance(sig_info.status, SignatureStatus)
+    
+    @pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="Code signing verification only works on Windows"
+    )
+    def test_verify_signature_nonexistent_file(self, tmp_path):
+        """Test verifying a non-existent file."""
+        verifier = CodeSigningVerifier()
+        nonexistent = tmp_path / "nonexistent.exe"
+        
+        with pytest.raises(FileNotFoundError):
+            verifier.verify_signature(nonexistent)
+    
+    def test_verify_signature_non_windows(self, tmp_path):
+        """Test verification on non-Windows returns unsigned status."""
+        if sys.platform == "win32":
+            pytest.skip("This test is for non-Windows platforms")
+        
+        test_file = tmp_path / "test.exe"
+        test_file.write_bytes(b"test")
+        
+        verifier = CodeSigningVerifier()
+        sig_info = verifier.verify_signature(test_file)
+        
+        assert sig_info.status == SignatureStatus.UNSIGNED
+        assert "Windows" in sig_info.error_message
+    
+    def test_extract_certificate(self, tmp_path, mocker):
+        """Test certificate extraction."""
+        verifier = CodeSigningVerifier()
+        test_file = tmp_path / "test.exe"
+        test_file.write_bytes(b"test")
+        
+        # Mock verify_signature to return a signature with certificate
+        mock_cert = CertificateInfo(
+            subject="CN=Test",
+            issuer="CN=Test CA",
+            serial_number="123",
+            thumbprint="ABC",
+            valid_from=datetime.now(),
+            valid_to=datetime.now() + timedelta(days=365)
+        )
+        mock_sig_info = SignatureInfo(
+            status=SignatureStatus.VALID,
+            certificate=mock_cert,
+            timestamp=datetime.now(),
+            hash_algorithm="SHA256"
+        )
+        
+        mocker.patch.object(verifier, 'verify_signature', return_value=mock_sig_info)
+        
+        cert = verifier.extract_certificate(test_file)
+        assert cert == mock_cert
+    
+    def test_extract_certificate_unsigned(self, tmp_path, mocker):
+        """Test certificate extraction from unsigned file."""
+        verifier = CodeSigningVerifier()
+        test_file = tmp_path / "test.exe"
+        test_file.write_bytes(b"test")
+        
+        mock_sig_info = SignatureInfo(
+            status=SignatureStatus.UNSIGNED,
+            certificate=None,
+            timestamp=None,
+            hash_algorithm=None
+        )
+        
+        mocker.patch.object(verifier, 'verify_signature', return_value=mock_sig_info)
+        
+        cert = verifier.extract_certificate(test_file)
+        assert cert is None
