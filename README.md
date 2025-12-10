@@ -110,6 +110,37 @@ The `plan` command previews the dependency order, highlights which entries are a
 
 The download cache automatically reuses installers that are already present in `~/.better11/downloads` after verifying their SHA-256 hash. Cached hits are surfaced in both the CLI and GUI so you know when a fresh download was (or was not) required.
 
+### Deployment Automation
+
+Better11 can generate Windows answer files (unattend.xml) to streamline image capture and deployment:
+
+```bash
+# Generate a basic unattended install file
+python -m better11.cli deploy unattend \
+  --product-key AAAAA-BBBBB-CCCCC-DDDDD-EEEEE \
+  --output ./artifacts/unattend.xml \
+  --language en-US \
+  --timezone "Pacific Standard Time" \
+  --admin-user Deployer \
+  --first-logon-command "1:echo post-setup"
+
+# Start from a prebuilt lab template and add an extra command
+python -m better11.cli deploy unattend \
+  --template lab \
+  --product-key AAAAA-BBBBB-CCCCC-DDDDD-EEEEE \
+  --output ./artifacts/unattend-lab.xml \
+  --first-logon-command "2:Install drivers|PowerShell -File .\\drivers.ps1"
+```
+
+Place the generated file alongside captured images and reference it during deployment, for example:
+
+```powershell
+dism /Apply-Image /ImageFile:D:\images\better11.wim /Index:1 /ApplyDir:C:\
+dism /Image:C:\ /Apply-Unattend:D:\images\unattend.xml
+```
+
+This keeps regional settings, administrator credentials, and first-logon automation consistent across capture/apply workflows.
+
 #### GUI
 
 Start the Tkinter GUI with:
@@ -165,9 +196,16 @@ apply_performance_preset(preset)
 - **[Changelog](CHANGELOG.md)** - Version history and changes
 
 ### Planning & Roadmap (v0.3.0+)
+- **[📊 Executive Summary](EXECUTIVE_SUMMARY.md)** - High-level overview for decision makers ⭐ LEADERS START HERE
+- **[📋 Planning Index](PLANNING_INDEX.md)** - Navigation guide for all planning documents
+- **[🚀 Forward Plan](FORWARD_PLAN.md)** - Comprehensive 12-week strategy for moving forward
+- **[⚡ Quick Start Guide](QUICKSTART_IMPLEMENTATION.md)** - Start implementing v0.3.0 TODAY 💻
+- **[🗺️ Visual Roadmap](ROADMAP_VISUAL.md)** - Timeline and milestone visualization
 - **[Roadmap v0.3-v1.0](ROADMAP_V0.3-V1.0.md)** - Feature roadmap through v1.0
-- **[Implementation Plan v0.3.0](IMPLEMENTATION_PLAN_V0.3.0.md)** - Detailed development plan
+- **[Implementation Plan v0.3.0](IMPLEMENTATION_PLAN_V0.3.0.md)** - Detailed technical development plan
+- **[What's Next?](WHATS_NEXT.md)** - Context and current state
 - **[Setup Complete](SETUP_COMPLETE.md)** - Infrastructure setup summary
+- **[Migration Plan](MIGRATION_PLAN_POWERSHELL_CSHARP_WINUI3.md)** - Optional long-term tech evolution
 ## Security Features
 
 Better11 takes security seriously:

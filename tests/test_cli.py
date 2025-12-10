@@ -129,3 +129,32 @@ def test_handle_fetch_media_success():
     exit_code = cli.handle_fetch_media(payload)
 
     assert exit_code == 0
+
+
+def test_deploy_unattend_command(tmp_path: Path) -> None:
+    output_file = tmp_path / "unattend.xml"
+
+    exit_code = cli.main(
+        [
+            "deploy",
+            "unattend",
+            "--product-key",
+            "AAAAA-BBBBB-CCCCC-DDDDD-EEEEE",
+            "--output",
+            str(output_file),
+            "--language",
+            "en-US",
+            "--timezone",
+            "UTC",
+            "--admin-user",
+            "Deployer",
+            "--first-logon-command",
+            "1:echo post setup",
+        ]
+    )
+
+    assert exit_code == 0
+    assert output_file.exists()
+    content = output_file.read_text()
+    assert "Deployer" in content
+    assert "AAAAA-BBBBB-CCCCC-DDDDD-EEEEE" in content

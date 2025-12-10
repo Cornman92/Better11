@@ -2,8 +2,26 @@ from __future__ import annotations
 
 import json
 import sys
+import pathlib
 from pathlib import Path
 from typing import Callable, Iterable, Mapping
+
+try:
+    import _pytest.nodes as _pytest_nodes
+
+    # Force pytest internals to use PosixPath semantics even if upstream tests
+    # monkeypatch `os.name` to simulate Windows environments. This prevents
+    # `WindowsPath` from being instantiated on non-Windows hosts, which causes
+    # `NotImplementedError` during error reporting.
+    _pytest_nodes.Path = pathlib.PosixPath  # type: ignore[attr-defined]
+except Exception:
+    # If pytest internals change, fallback gracefully without breaking tests.
+    pass
+
+# Prevent accidental promotion to WindowsPath on POSIX hosts. Some libraries
+# instantiate ``WindowsPath`` when simulating Windows behavior; remapping it to
+# ``PosixPath`` keeps path handling compatible in this environment.
+pathlib.WindowsPath = pathlib.PosixPath  # type: ignore[attr-defined]
 
 import pytest
 
