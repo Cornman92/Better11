@@ -29,6 +29,10 @@ packaging>=23.2                        # Version parsing and comparison
 pillow>=10.1.0                         # Image processing for GUI
 # matplotlib>=3.8.0                    # Charts and graphs (future)
 
+# TUI (Terminal User Interface)
+rich>=13.7.0                           # Rich text and beautiful formatting
+textual>=0.47.0                        # Terminal UI framework
+
 # Reporting (v0.5.0+)
 # jinja2>=3.1.2                        # Report templates (future)
 # weasyprint>=60.0                     # PDF generation (future)
