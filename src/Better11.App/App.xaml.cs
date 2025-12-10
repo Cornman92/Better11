@@ -1,4 +1,4 @@
-using Better11.Infrastructure.Logging;
+using Better11.App.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
@@ -25,17 +25,8 @@ public partial class App : Application
         _host = Host.CreateDefaultBuilder()
             .ConfigureServices((context, services) =>
             {
-                // Configure logging
-                services.ConfigureLogging();
-
-                // TODO: Register services here
-                // services.AddSingleton<INavigationService, NavigationService>();
-                // services.AddSingleton<IDialogService, DialogService>();
-                // services.AddTransient<DashboardViewModel>();
-                // etc.
-
-                // Register main window
-                services.AddSingleton<MainWindow>();
+                // Configure all services using ServiceConfiguration
+                services.ConfigureServices();
             })
             .Build();
 
