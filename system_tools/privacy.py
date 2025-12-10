@@ -5,14 +5,22 @@ telemetry collection, and app permissions.
 """
 from __future__ import annotations
 
+import platform
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional
 
 from . import get_logger
 from .base import SystemTool, ToolMetadata
+from .safety import ensure_windows
 
 _LOGGER = get_logger(__name__)
+
+# Registry paths for privacy settings
+TELEMETRY_KEY = r"HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+PRIVACY_KEY = r"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager"
+ADVERTISING_KEY = r"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
+CORTANA_KEY = r"HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
 
 
 class TelemetryLevel(Enum):
@@ -134,9 +142,42 @@ class PrivacyManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Setting telemetry level to %s", level.name)
-        # TODO: Set registry key at HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
-        raise NotImplementedError("Telemetry control - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("[DRY RUN] Would set telemetry level to %s", level.name)
+            return True
+        
+        try:
+            import winreg
+            
+            # Open or create registry key
+            key_path = r"SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+            try:
+                key = winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    key_path,
+                    0,
+                    winreg.KEY_WRITE
+                )
+            except FileNotFoundError:
+                # Create key if it doesn't exist
+                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, key_path)
+            
+            # Set AllowTelemetry value
+            winreg.SetValueEx(key, "AllowTelemetry", 0, winreg.REG_DWORD, level.value)
+            winreg.CloseKey(key)
+            
+            _LOGGER.info("Successfully set telemetry level to %s", level.name)
+            return True
+            
+        except PermissionError:
+            _LOGGER.error("Administrator privileges required to set telemetry level")
+            return False
+        except Exception as e:
+            _LOGGER.error("Error setting telemetry level: %s", e)
+            return False
     
     def get_telemetry_level(self) -> TelemetryLevel:
         """Get current Windows telemetry level.
@@ -146,8 +187,39 @@ class PrivacyManager(SystemTool):
         TelemetryLevel
             Current telemetry level
         """
-        # TODO: Read from registry
-        raise NotImplementedError("Get telemetry level - coming in v0.3.0")
+        ensure_windows()
+        
+        try:
+            import winreg
+            
+            key_path = r"SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+            key = winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                key_path,
+                0,
+                winreg.KEY_READ
+            )
+            
+            value, _ = winreg.QueryValueEx(key, "AllowTelemetry")
+            winreg.CloseKey(key)
+            
+            # Map registry value to enum
+            level_map = {
+                0: TelemetryLevel.SECURITY,
+                1: TelemetryLevel.BASIC,
+                2: TelemetryLevel.ENHANCED,
+                3: TelemetryLevel.FULL,
+            }
+            
+            return level_map.get(value, TelemetryLevel.BASIC)
+            
+        except FileNotFoundError:
+            # Key doesn't exist, return default
+            _LOGGER.debug("Telemetry registry key not found, using default")
+            return TelemetryLevel.BASIC
+        except Exception as e:
+            _LOGGER.warning("Error reading telemetry level: %s", e)
+            return TelemetryLevel.BASIC
     
     def set_app_permission(self, setting: PrivacySetting, enabled: bool) -> bool:
         """Set an app permission.
@@ -164,9 +236,43 @@ class PrivacyManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Setting %s permission to %s", setting.value, enabled)
-        # TODO: Set registry keys for app permissions
-        raise NotImplementedError("App permissions - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("[DRY RUN] Would set %s permission to %s", setting.value, enabled)
+            return True
+        
+        try:
+            import winreg
+            
+            # Map privacy settings to registry subkeys
+            # Windows 10/11 stores app permissions in CapabilityAccessManager
+            key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore"
+            
+            # Create subkey for this permission
+            subkey_path = f"{key_path}\\{setting.value}"
+            
+            try:
+                key = winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER,
+                    subkey_path,
+                    0,
+                    winreg.KEY_WRITE
+                )
+            except FileNotFoundError:
+                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, subkey_path)
+            
+            # Set Value to "Deny" (0) or "Allow" (1)
+            winreg.SetValueEx(key, "Value", 0, winreg.REG_SZ, "Deny" if not enabled else "Allow")
+            winreg.CloseKey(key)
+            
+            _LOGGER.info("Successfully set %s permission to %s", setting.value, enabled)
+            return True
+            
+        except Exception as e:
+            _LOGGER.error("Error setting app permission: %s", e)
+            return False
     
     def get_app_permission(self, setting: PrivacySetting) -> bool:
         """Get current state of an app permission.
@@ -181,8 +287,33 @@ class PrivacyManager(SystemTool):
         bool
             True if permission is enabled
         """
-        # TODO: Read from registry
-        raise NotImplementedError("Get app permission - coming in v0.3.0")
+        ensure_windows()
+        
+        try:
+            import winreg
+            
+            key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore"
+            subkey_path = f"{key_path}\\{setting.value}"
+            
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                subkey_path,
+                0,
+                winreg.KEY_READ
+            )
+            
+            value, _ = winreg.QueryValueEx(key, "Value")
+            winreg.CloseKey(key)
+            
+            return value.lower() == "allow"
+            
+        except FileNotFoundError:
+            # Key doesn't exist, return default (usually enabled)
+            _LOGGER.debug("Permission registry key not found for %s", setting.value)
+            return True
+        except Exception as e:
+            _LOGGER.warning("Error reading app permission: %s", e)
+            return True  # Default to enabled
     
     def disable_advertising_id(self) -> bool:
         """Disable Windows advertising ID.
@@ -192,9 +323,38 @@ class PrivacyManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Disabling advertising ID")
-        # TODO: Set registry key
-        raise NotImplementedError("Disable advertising ID - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("[DRY RUN] Would disable advertising ID")
+            return True
+        
+        try:
+            import winreg
+            
+            key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
+            
+            try:
+                key = winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER,
+                    key_path,
+                    0,
+                    winreg.KEY_WRITE
+                )
+            except FileNotFoundError:
+                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path)
+            
+            # Set Enabled to 0 (disabled)
+            winreg.SetValueEx(key, "Enabled", 0, winreg.REG_DWORD, 0)
+            winreg.CloseKey(key)
+            
+            _LOGGER.info("Successfully disabled advertising ID")
+            return True
+            
+        except Exception as e:
+            _LOGGER.error("Error disabling advertising ID: %s", e)
+            return False
     
     def disable_cortana(self) -> bool:
         """Disable Cortana.
@@ -204,9 +364,42 @@ class PrivacyManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Disabling Cortana")
-        # TODO: Set group policy registry keys
-        raise NotImplementedError("Disable Cortana - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("[DRY RUN] Would disable Cortana")
+            return True
+        
+        try:
+            import winreg
+            
+            # Disable Cortana via group policy registry keys
+            key_path = r"SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+            
+            try:
+                key = winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    key_path,
+                    0,
+                    winreg.KEY_WRITE
+                )
+            except FileNotFoundError:
+                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, key_path)
+            
+            # Set AllowCortana to 0 (disabled)
+            winreg.SetValueEx(key, "AllowCortana", 0, winreg.REG_DWORD, 0)
+            winreg.CloseKey(key)
+            
+            _LOGGER.info("Successfully disabled Cortana")
+            return True
+            
+        except PermissionError:
+            _LOGGER.error("Administrator privileges required to disable Cortana")
+            return False
+        except Exception as e:
+            _LOGGER.error("Error disabling Cortana: %s", e)
+            return False
     
     def apply_preset(self, preset: PrivacyPreset) -> bool:
         """Apply a privacy preset.

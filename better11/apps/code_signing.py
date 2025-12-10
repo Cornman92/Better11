@@ -5,6 +5,8 @@ This module provides Authenticode signature verification for PE files
 """
 from __future__ import annotations
 
+import json
+import platform
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,7 +14,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-# Placeholder - will be implemented in Phase 2
+# Import logging
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class SignatureStatus(Enum):
@@ -85,10 +90,141 @@ class CodeSigningVerifier:
         -------
         SignatureInfo
             Signature verification results
+        
+        Raises
+        ------
+        RuntimeError
+            If verification fails due to system errors
         """
-        # TODO: Implement signature verification using PowerShell
-        # Get-AuthenticodeSignature -FilePath "..."
-        raise NotImplementedError("Code signing verification - coming in v0.3.0")
+        if platform.system() != "Windows":
+            _LOGGER.warning("Code signing verification only available on Windows")
+            return SignatureInfo(
+                status=SignatureStatus.UNSIGNED,
+                certificate=None,
+                timestamp=None,
+                hash_algorithm=None,
+                error_message="Code signing verification only available on Windows"
+            )
+        
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+        
+        try:
+            # Use PowerShell Get-AuthenticodeSignature
+            # Convert to JSON for easier parsing
+            ps_command = f"""
+            $sig = Get-AuthenticodeSignature -FilePath '{file_path}'
+            $result = @{{
+                Status = $sig.Status.ToString()
+                StatusMessage = $sig.StatusMessage
+                Path = $sig.Path
+                HashAlgorithm = $sig.HashAlgorithm.ToString()
+            }}
+            if ($sig.SignerCertificate) {{
+                $result.Certificate = @{{
+                    Subject = $sig.SignerCertificate.Subject
+                    Issuer = $sig.SignerCertificate.Issuer
+                    SerialNumber = $sig.SignerCertificate.SerialNumber
+                    Thumbprint = $sig.SignerCertificate.Thumbprint
+                    NotBefore = $sig.SignerCertificate.NotBefore.ToString('o')
+                    NotAfter = $sig.SignerCertificate.NotAfter.ToString('o')
+                }}
+            }}
+            if ($sig.TimeStamperCertificate) {{
+                $result.Timestamp = $sig.TimeStamperCertificate.NotBefore.ToString('o')
+            }}
+            $result | ConvertTo-Json -Depth 10
+            """
+            
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", ps_command],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=30
+            )
+            
+            data = json.loads(result.stdout)
+            
+            # Map PowerShell status to our enum
+            ps_status = data.get("Status", "Unknown").upper()
+            status_map = {
+                "VALID": SignatureStatus.VALID,
+                "NOTSIGNED": SignatureStatus.UNSIGNED,
+                "HASHMISMATCH": SignatureStatus.INVALID,
+                "NOTTRUSTED": SignatureStatus.UNTRUSTED,
+                "REVOKED": SignatureStatus.REVOKED,
+                "EXPIRED": SignatureStatus.EXPIRED,
+                "UNKNOWN": SignatureStatus.INVALID,
+            }
+            status = status_map.get(ps_status, SignatureStatus.INVALID)
+            
+            # Extract certificate info if present
+            cert_info = None
+            if "Certificate" in data and data["Certificate"]:
+                cert_data = data["Certificate"]
+                cert_info = CertificateInfo(
+                    subject=cert_data.get("Subject", ""),
+                    issuer=cert_data.get("Issuer", ""),
+                    serial_number=cert_data.get("SerialNumber", ""),
+                    thumbprint=cert_data.get("Thumbprint", ""),
+                    valid_from=datetime.fromisoformat(cert_data.get("NotBefore", "")),
+                    valid_to=datetime.fromisoformat(cert_data.get("NotAfter", ""))
+                )
+                
+                # Check if expired
+                if cert_info.is_expired():
+                    status = SignatureStatus.EXPIRED
+            
+            # Extract timestamp if present
+            timestamp = None
+            if "Timestamp" in data and data["Timestamp"]:
+                timestamp = datetime.fromisoformat(data["Timestamp"])
+            
+            return SignatureInfo(
+                status=status,
+                certificate=cert_info,
+                timestamp=timestamp,
+                hash_algorithm=data.get("HashAlgorithm"),
+                error_message=data.get("StatusMessage") if status != SignatureStatus.VALID else None
+            )
+            
+        except subprocess.TimeoutExpired:
+            _LOGGER.error("Code signing verification timed out for %s", file_path)
+            return SignatureInfo(
+                status=SignatureStatus.INVALID,
+                certificate=None,
+                timestamp=None,
+                hash_algorithm=None,
+                error_message="Verification timed out"
+            )
+        except subprocess.CalledProcessError as e:
+            _LOGGER.error("PowerShell command failed: %s", e.stderr)
+            return SignatureInfo(
+                status=SignatureStatus.INVALID,
+                certificate=None,
+                timestamp=None,
+                hash_algorithm=None,
+                error_message=f"PowerShell error: {e.stderr}"
+            )
+        except json.JSONDecodeError as e:
+            _LOGGER.error("Failed to parse PowerShell output: %s", e)
+            return SignatureInfo(
+                status=SignatureStatus.INVALID,
+                certificate=None,
+                timestamp=None,
+                hash_algorithm=None,
+                error_message=f"Failed to parse verification output: {e}"
+            )
+        except Exception as e:
+            _LOGGER.error("Unexpected error during signature verification: %s", e)
+            return SignatureInfo(
+                status=SignatureStatus.INVALID,
+                certificate=None,
+                timestamp=None,
+                hash_algorithm=None,
+                error_message=f"Unexpected error: {str(e)}"
+            )
     
     def extract_certificate(self, file_path: Path) -> Optional[CertificateInfo]:
         """Extract certificate information from signed file.
@@ -103,8 +239,9 @@ class CodeSigningVerifier:
         Optional[CertificateInfo]
             Certificate information if file is signed, None otherwise
         """
-        # TODO: Implement certificate extraction
-        raise NotImplementedError("Certificate extraction - coming in v0.3.0")
+        # Use verify_signature and extract certificate from result
+        sig_info = self.verify_signature(file_path)
+        return sig_info.certificate
     
     def is_trusted_publisher(self, cert_info: CertificateInfo) -> bool:
         """Check if certificate publisher is in trusted list.
