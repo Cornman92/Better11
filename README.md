@@ -21,7 +21,6 @@ See [ROADMAP_V0.3-V1.0.md](ROADMAP_V0.3-V1.0.md) for detailed feature roadmap an
 - **Multiple Formats**: Support for MSI, EXE, and AppX installers
 - **Silent Installation**: Automated silent installation with proper arguments
 - **State Tracking**: Persistent tracking of installed applications
-
 ### 🛠️ System Tools
 - **Registry Tweaks**: Apply performance and customization tweaks with automatic backup
 - **Bloatware Removal**: Remove unwanted AppX packages safely
@@ -161,7 +160,6 @@ apply_performance_preset(preset)
 - **[Roadmap v0.3-v1.0](ROADMAP_V0.3-V1.0.md)** - Feature roadmap through v1.0
 - **[Implementation Plan v0.3.0](IMPLEMENTATION_PLAN_V0.3.0.md)** - Detailed development plan
 - **[Setup Complete](SETUP_COMPLETE.md)** - Infrastructure setup summary
-
 ## Security Features
 
 Better11 takes security seriously:
