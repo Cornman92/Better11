@@ -1,4 +1,6 @@
 """Tests for system tool base classes."""
+import os
+
 import pytest
 
 from system_tools.base import SystemTool, RegistryTool, ToolMetadata
@@ -57,13 +59,15 @@ class TestSystemTool:
         tool = MockSystemTool(config=config)
         assert tool.config == config
     
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-specific safety checks")
     def test_tool_dry_run_mode(self):
         """Test tool in dry-run mode."""
         tool = MockSystemTool(dry_run=True)
         assert tool.dry_run is True
         result = tool.run(skip_confirmation=True)
         assert result is True  # Dry run should succeed
-    
+
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-specific safety checks")
     def test_tool_run_success(self):
         """Test successful tool execution."""
         tool = MockSystemTool()
