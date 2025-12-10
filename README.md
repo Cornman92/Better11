@@ -158,9 +158,16 @@ apply_performance_preset(preset)
 - **[Changelog](CHANGELOG.md)** - Version history and changes
 
 ### Planning & Roadmap (v0.3.0+)
+- **[📊 Executive Summary](EXECUTIVE_SUMMARY.md)** - High-level overview for decision makers ⭐ LEADERS START HERE
+- **[📋 Planning Index](PLANNING_INDEX.md)** - Navigation guide for all planning documents
+- **[🚀 Forward Plan](FORWARD_PLAN.md)** - Comprehensive 12-week strategy for moving forward
+- **[⚡ Quick Start Guide](QUICKSTART_IMPLEMENTATION.md)** - Start implementing v0.3.0 TODAY 💻
+- **[🗺️ Visual Roadmap](ROADMAP_VISUAL.md)** - Timeline and milestone visualization
 - **[Roadmap v0.3-v1.0](ROADMAP_V0.3-V1.0.md)** - Feature roadmap through v1.0
-- **[Implementation Plan v0.3.0](IMPLEMENTATION_PLAN_V0.3.0.md)** - Detailed development plan
+- **[Implementation Plan v0.3.0](IMPLEMENTATION_PLAN_V0.3.0.md)** - Detailed technical development plan
+- **[What's Next?](WHATS_NEXT.md)** - Context and current state
 - **[Setup Complete](SETUP_COMPLETE.md)** - Infrastructure setup summary
+- **[Migration Plan](MIGRATION_PLAN_POWERSHELL_CSHARP_WINUI3.md)** - Optional long-term tech evolution
 
 ## Security Features
 
