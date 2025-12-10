@@ -179,6 +179,129 @@ def disable_advertising_id() -> int:
         return 1
 
 
+def pause_windows_updates(days: int) -> int:
+    """Pause Windows updates."""
+    try:
+        from system_tools.updates import WindowsUpdateManager
+        
+        print(f"Pausing Windows updates for {days} days...")
+        manager = WindowsUpdateManager()
+        success = manager.pause_updates(days)
+        
+        if success:
+            print(f"✅ Windows updates paused for {days} days")
+            print(f"⏸️  Updates will resume automatically after this period")
+            return 0
+        else:
+            print(f"❌ Failed to pause updates")
+            print(f"⚠️  This operation requires administrator rights on Windows")
+            return 1
+    
+    except ValueError as exc:
+        print(f"❌ Invalid input: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"Error pausing updates: {exc}", file=sys.stderr)
+        return 1
+
+
+def resume_windows_updates() -> int:
+    """Resume Windows updates."""
+    try:
+        from system_tools.updates import WindowsUpdateManager
+        
+        print("Resuming Windows updates...")
+        manager = WindowsUpdateManager()
+        success = manager.resume_updates()
+        
+        if success:
+            print("✅ Windows updates resumed")
+            print("🔄 Updates will check and install normally")
+            return 0
+        else:
+            print("❌ Failed to resume updates")
+            return 1
+    
+    except Exception as exc:
+        print(f"Error resuming updates: {exc}", file=sys.stderr)
+        return 1
+
+
+def set_active_hours(start: int, end: int) -> int:
+    """Set Windows Update active hours."""
+    try:
+        from system_tools.updates import WindowsUpdateManager
+        
+        print(f"Setting active hours to {start}:00 - {end}:00...")
+        manager = WindowsUpdateManager()
+        success = manager.set_active_hours(start, end)
+        
+        if success:
+            print(f"✅ Active hours set to {start}:00 - {end}:00")
+            print(f"⏰ Windows will avoid restarting during these hours")
+            return 0
+        else:
+            print(f"❌ Failed to set active hours")
+            print(f"⚠️  This operation requires administrator rights")
+            return 1
+    
+    except ValueError as exc:
+        print(f"❌ Invalid input: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"Error setting active hours: {exc}", file=sys.stderr)
+        return 1
+
+
+def disable_startup_program(name: str, location_str: str) -> int:
+    """Disable a startup program."""
+    try:
+        from system_tools.startup import StartupManager, StartupLocation
+        
+        # First, list items to find the one to disable
+        manager = StartupManager()
+        items = manager.list_startup_items()
+        
+        # Find matching item
+        matching = [item for item in items if item.name.lower() == name.lower()]
+        
+        if not matching:
+            print(f"❌ Startup program '{name}' not found")
+            print(f"\nUse 'startup list' to see available programs")
+            return 1
+        
+        # If multiple matches, show them
+        if len(matching) > 1:
+            print(f"Found {len(matching)} programs named '{name}':")
+            for i, item in enumerate(matching, 1):
+                print(f"  {i}. {item.name} in {item.location.value}")
+            
+            # For now, disable the first one
+            item = matching[0]
+            print(f"\nDisabling first match: {item.name} from {item.location.value}")
+        else:
+            item = matching[0]
+        
+        # Disable it
+        print(f"Disabling '{item.name}' from {item.location.value}...")
+        success = manager.disable_startup_item(item)
+        
+        if success:
+            print(f"✅ Disabled: {item.name}")
+            print(f"⚠️  Changes take effect after restart")
+            return 0
+        else:
+            print(f"❌ Failed to disable startup program")
+            print(f"⚠️  This operation may require administrator rights")
+            return 1
+    
+    except Exception as exc:
+        print(f"Error disabling startup program: {exc}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Better11 - Windows 11 Enhancement Toolkit")
     parser.add_argument(
@@ -214,6 +337,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     startup_subparsers = startup_parser.add_subparsers(dest="startup_command")
     startup_subparsers.add_parser("list", help="List all startup programs")
     
+    disable_parser = startup_subparsers.add_parser("disable", help="Disable a startup program")
+    disable_parser.add_argument("name", help="Name of startup program to disable")
+    disable_parser.add_argument("--location", help="Location (hklm_run, hkcu_run, etc.)", default="hkcu_run")
+    
     # Privacy management commands
     privacy_parser = subparsers.add_parser("privacy", help="Manage privacy and telemetry")
     privacy_subparsers = privacy_parser.add_subparsers(dest="privacy_command")
@@ -223,6 +350,19 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     telemetry_parser.add_argument("level", choices=["security", "basic", "enhanced", "full"])
     
     privacy_subparsers.add_parser("disable-ads", help="Disable advertising ID")
+    
+    # Windows Update management commands
+    updates_parser = subparsers.add_parser("updates", help="Manage Windows Updates")
+    updates_subparsers = updates_parser.add_subparsers(dest="updates_command")
+    
+    pause_parser = updates_subparsers.add_parser("pause", help="Pause Windows updates")
+    pause_parser.add_argument("--days", type=int, default=7, help="Number of days to pause (default: 7, max: 35)")
+    
+    updates_subparsers.add_parser("resume", help="Resume Windows updates")
+    
+    active_hours_parser = updates_subparsers.add_parser("set-active-hours", help="Set active hours")
+    active_hours_parser.add_argument("start", type=int, help="Start hour (0-23)")
+    active_hours_parser.add_argument("end", type=int, help="End hour (0-23)")
 
     return parser.parse_args(argv)
 
@@ -239,8 +379,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "startup":
         if args.startup_command == "list":
             return list_startup_items()
+        elif args.startup_command == "disable":
+            return disable_startup_program(args.name, args.location)
         else:
-            print("Use: better11-cli startup list")
+            print("Use: better11-cli startup [list|disable]")
             return 1
     
     # Handle privacy commands (don't need catalog)
@@ -253,6 +395,18 @@ def main(argv: list[str] | None = None) -> int:
             return disable_advertising_id()
         else:
             print("Use: better11-cli privacy [status|set-telemetry|disable-ads]")
+            return 1
+    
+    # Handle Windows Update commands (don't need catalog)
+    if args.command == "updates":
+        if args.updates_command == "pause":
+            return pause_windows_updates(args.days)
+        elif args.updates_command == "resume":
+            return resume_windows_updates()
+        elif args.updates_command == "set-active-hours":
+            return set_active_hours(args.start, args.end)
+        else:
+            print("Use: better11-cli updates [pause|resume|set-active-hours]")
             return 1
     
     # Handle app management commands (need catalog)

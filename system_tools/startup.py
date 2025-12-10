@@ -291,22 +291,92 @@ class StartupManager(SystemTool):
         
         return items
     
-    def enable_startup_item(self, item: StartupItem) -> bool:
-        """Enable a startup item.
+    def enable_startup_item(self, name: str, command: str, location: StartupLocation) -> bool:
+        """Enable a startup item by adding it to the specified location.
         
         Parameters
         ----------
-        item : StartupItem
-            Startup item to enable
+        name : str
+            Name of the startup item
+        command : str
+            Command to execute
+        location : StartupLocation
+            Where to add the startup item
         
         Returns
         -------
         bool
             True if successful
         """
-        _LOGGER.info("Enabling startup item: %s", item.name)
-        # TODO: Re-add to appropriate location
-        raise NotImplementedError("Enable startup item - coming in v0.3.0")
+        _LOGGER.info("Enabling startup item: %s at %s", name, location.value)
+        
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would enable %s at %s", name, location.value)
+            return True
+        
+        try:
+            if location in [StartupLocation.REGISTRY_HKLM_RUN, StartupLocation.REGISTRY_HKCU_RUN]:
+                return self._enable_registry_item(name, command, location)
+            elif location in [StartupLocation.STARTUP_FOLDER_COMMON, StartupLocation.STARTUP_FOLDER_USER]:
+                _LOGGER.warning("Enabling folder items not yet implemented")
+                return False
+            else:
+                _LOGGER.warning("Enabling %s not yet supported", location.value)
+                return False
+        
+        except Exception as exc:
+            _LOGGER.error("Failed to enable startup item %s: %s", name, exc)
+            return False
+    
+    def _enable_registry_item(self, name: str, command: str, location: StartupLocation) -> bool:
+        """Enable a registry startup item by creating/updating the value.
+        
+        Parameters
+        ----------
+        name : str
+            Name of startup item
+        command : str
+            Command to execute
+        location : StartupLocation
+            Registry location
+        
+        Returns
+        -------
+        bool
+            True if successful
+        """
+        import platform
+        if platform.system() != "Windows":
+            _LOGGER.warning("Registry operations only on Windows")
+            return False
+        
+        import winreg
+        
+        # Determine which registry hive
+        if location == StartupLocation.REGISTRY_HKLM_RUN:
+            hive = winreg.HKEY_LOCAL_MACHINE
+            key_path = STARTUP_REGISTRY_PATHS["HKLM"]
+        else:
+            hive = winreg.HKEY_CURRENT_USER
+            key_path = STARTUP_REGISTRY_PATHS["HKCU"]
+        
+        try:
+            # Open/create the key with write access
+            key = winreg.CreateKey(hive, key_path)
+            
+            # Set the value
+            winreg.SetValueEx(key, name, 0, winreg.REG_SZ, command)
+            winreg.CloseKey(key)
+            
+            _LOGGER.info("Enabled registry startup item: %s", name)
+            return True
+        
+        except PermissionError:
+            _LOGGER.error("Permission denied - admin rights may be required")
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to set registry value: %s", exc)
+            return False
     
     def disable_startup_item(self, item: StartupItem) -> bool:
         """Disable a startup item.
@@ -322,11 +392,117 @@ class StartupManager(SystemTool):
             True if successful
         """
         _LOGGER.info("Disabling startup item: %s", item.name)
-        # TODO: Remove from startup location
-        raise NotImplementedError("Disable startup item - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would disable %s from %s", item.name, item.location.value)
+            return True
+        
+        try:
+            if item.location in [StartupLocation.REGISTRY_HKLM_RUN, StartupLocation.REGISTRY_HKCU_RUN]:
+                return self._disable_registry_item(item)
+            elif item.location in [StartupLocation.STARTUP_FOLDER_COMMON, StartupLocation.STARTUP_FOLDER_USER]:
+                return self._disable_folder_item(item)
+            else:
+                _LOGGER.warning("Disabling %s not yet supported", item.location.value)
+                return False
+        
+        except Exception as exc:
+            _LOGGER.error("Failed to disable startup item %s: %s", item.name, exc)
+            return False
+    
+    def _disable_registry_item(self, item: StartupItem) -> bool:
+        """Disable a registry startup item by deleting the value.
+        
+        Parameters
+        ----------
+        item : StartupItem
+            Registry startup item
+        
+        Returns
+        -------
+        bool
+            True if successful
+        """
+        import platform
+        if platform.system() != "Windows":
+            _LOGGER.warning("Registry operations only on Windows")
+            return False
+        
+        import winreg
+        
+        # Determine which registry hive
+        if item.location == StartupLocation.REGISTRY_HKLM_RUN:
+            hive = winreg.HKEY_LOCAL_MACHINE
+            key_path = STARTUP_REGISTRY_PATHS["HKLM"]
+        else:
+            hive = winreg.HKEY_CURRENT_USER
+            key_path = STARTUP_REGISTRY_PATHS["HKCU"]
+        
+        try:
+            # Open the key with write access
+            key = winreg.OpenKey(hive, key_path, 0, winreg.KEY_SET_VALUE)
+            
+            # Delete the value
+            winreg.DeleteValue(key, item.name)
+            winreg.CloseKey(key)
+            
+            _LOGGER.info("Disabled registry startup item: %s", item.name)
+            return True
+        
+        except FileNotFoundError:
+            _LOGGER.warning("Registry key or value not found: %s", item.name)
+            return False
+        except PermissionError:
+            _LOGGER.error("Permission denied - admin rights may be required")
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to delete registry value: %s", exc)
+            return False
+    
+    def _disable_folder_item(self, item: StartupItem) -> bool:
+        """Disable a startup folder item by renaming/moving it.
+        
+        Parameters
+        ----------
+        item : StartupItem
+            Folder startup item
+        
+        Returns
+        -------
+        bool
+            True if successful
+        """
+        try:
+            item_path = Path(item.command)
+            
+            if not item_path.exists():
+                _LOGGER.warning("Startup item file not found: %s", item_path)
+                return False
+            
+            # Rename by adding .disabled extension
+            disabled_path = item_path.with_suffix(item_path.suffix + '.disabled')
+            
+            # If already has a .disabled, don't duplicate
+            if disabled_path.exists():
+                _LOGGER.warning("Item already disabled: %s", item.name)
+                return True
+            
+            item_path.rename(disabled_path)
+            _LOGGER.info("Disabled startup folder item: %s -> %s", item.name, disabled_path.name)
+            return True
+        
+        except PermissionError:
+            _LOGGER.error("Permission denied to modify startup folder")
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to disable folder item: %s", exc)
+            return False
     
     def remove_startup_item(self, item: StartupItem) -> bool:
         """Permanently remove a startup item.
+        
+        This is an alias for disable_startup_item for now, since
+        disabling removes from registry or renames in folder.
         
         Parameters
         ----------
@@ -339,8 +515,7 @@ class StartupManager(SystemTool):
             True if successful
         """
         _LOGGER.info("Removing startup item: %s", item.name)
-        # TODO: Delete from registry/folder/task scheduler
-        raise NotImplementedError("Remove startup item - coming in v0.3.0")
+        return self.disable_startup_item(item)
     
     def get_recommendations(self) -> List[str]:
         """Get startup optimization recommendations.

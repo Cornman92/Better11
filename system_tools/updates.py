@@ -136,10 +136,52 @@ class WindowsUpdateManager(SystemTool):
         """
         if days > 35:
             raise ValueError("Cannot pause updates for more than 35 days")
+        if days < 1:
+            raise ValueError("Days must be at least 1")
         
         _LOGGER.info("Pausing updates for %d days", days)
-        # TODO: Set registry key to pause updates
-        raise NotImplementedError("Pause updates - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would pause updates for %d days", days)
+            return True
+        
+        try:
+            import platform
+            if platform.system() != "Windows":
+                _LOGGER.warning("Windows Update management only available on Windows")
+                return False
+            
+            import winreg
+            from datetime import datetime, timedelta
+            
+            # Calculate pause end date
+            pause_until = datetime.now() + timedelta(days=days)
+            # Convert to ISO 8601 format that Windows expects
+            pause_date_str = pause_until.strftime("%Y-%m-%dT%H:%M:%SZ")
+            
+            # Registry key for Windows Update settings
+            key_path = r"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
+            
+            key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, key_path)
+            
+            # Set pause date for both feature and quality updates
+            winreg.SetValueEx(key, "PauseFeatureUpdatesStartTime", 0, winreg.REG_SZ, pause_date_str)
+            winreg.SetValueEx(key, "PauseQualityUpdatesStartTime", 0, winreg.REG_SZ, pause_date_str)
+            winreg.SetValueEx(key, "PauseFeatureUpdatesEndTime", 0, winreg.REG_SZ, pause_date_str)
+            winreg.SetValueEx(key, "PauseQualityUpdatesEndTime", 0, winreg.REG_SZ, pause_date_str)
+            winreg.SetValueEx(key, "PauseUpdatesExpiryTime", 0, winreg.REG_SZ, pause_date_str)
+            
+            winreg.CloseKey(key)
+            
+            _LOGGER.info("Updates paused until %s", pause_date_str)
+            return True
+        
+        except PermissionError:
+            _LOGGER.error("Permission denied - admin rights required")
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to pause updates: %s", exc)
+            return False
     
     def resume_updates(self) -> bool:
         """Resume Windows updates if paused.
@@ -150,8 +192,53 @@ class WindowsUpdateManager(SystemTool):
             True if successful
         """
         _LOGGER.info("Resuming Windows updates")
-        # TODO: Clear pause registry key
-        raise NotImplementedError("Resume updates - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would resume updates")
+            return True
+        
+        try:
+            import platform
+            if platform.system() != "Windows":
+                return False
+            
+            import winreg
+            
+            key_path = r"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
+            
+            try:
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path, 0, winreg.KEY_SET_VALUE)
+                
+                # Delete pause-related values
+                pause_values = [
+                    "PauseFeatureUpdatesStartTime",
+                    "PauseQualityUpdatesStartTime",
+                    "PauseFeatureUpdatesEndTime",
+                    "PauseQualityUpdatesEndTime",
+                    "PauseUpdatesExpiryTime",
+                ]
+                
+                for value_name in pause_values:
+                    try:
+                        winreg.DeleteValue(key, value_name)
+                    except FileNotFoundError:
+                        pass  # Value doesn't exist, that's fine
+                
+                winreg.CloseKey(key)
+                
+                _LOGGER.info("Updates resumed")
+                return True
+            
+            except FileNotFoundError:
+                _LOGGER.debug("Windows Update settings key not found")
+                return True  # Nothing to resume
+        
+        except PermissionError:
+            _LOGGER.error("Permission denied - admin rights required")
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to resume updates: %s", exc)
+            return False
     
     def set_active_hours(self, start_hour: int, end_hour: int) -> bool:
         """Set active hours to prevent restart interruptions.
@@ -172,8 +259,40 @@ class WindowsUpdateManager(SystemTool):
             raise ValueError("Hours must be between 0 and 23")
         
         _LOGGER.info("Setting active hours: %d:00 - %d:00", start_hour, end_hour)
-        # TODO: Set active hours via registry
-        raise NotImplementedError("Active hours - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would set active hours to %d:00 - %d:00", start_hour, end_hour)
+            return True
+        
+        try:
+            import platform
+            if platform.system() != "Windows":
+                return False
+            
+            import winreg
+            
+            key_path = r"SOFTWARE\Microsoft\WindowsUpdate\UX\Settings"
+            
+            key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, key_path)
+            
+            # Set active hours
+            winreg.SetValueEx(key, "ActiveHoursStart", 0, winreg.REG_DWORD, start_hour)
+            winreg.SetValueEx(key, "ActiveHoursEnd", 0, winreg.REG_DWORD, end_hour)
+            
+            # Enable smart active hours (Windows will adjust based on usage)
+            winreg.SetValueEx(key, "SmartActiveHoursState", 0, winreg.REG_DWORD, 0)
+            
+            winreg.CloseKey(key)
+            
+            _LOGGER.info("Active hours set to %d:00 - %d:00", start_hour, end_hour)
+            return True
+        
+        except PermissionError:
+            _LOGGER.error("Permission denied - admin rights required")
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to set active hours: %s", exc)
+            return False
     
     def get_update_history(self, days: int = 30) -> List[WindowsUpdate]:
         """Get Windows update installation history.
