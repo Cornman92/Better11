@@ -47,3 +47,6 @@ isort>=5.12.0                          # Import sorting
 # Documentation
 sphinx>=7.2.0                          # Documentation generation
 sphinx-rtd-theme>=2.0.0                # ReadTheDocs theme
+
+# Packaging
+build>=1.0.3                           # Reproducible wheel builds for installer packaging

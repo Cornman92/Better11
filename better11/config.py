@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field, asdict
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Optional, Any, Dict
 
 try:
@@ -279,10 +279,14 @@ class Config:
         Path
             System configuration file path (C:\\ProgramData\\Better11\\config.toml on Windows)
         """
-        if os.name == 'nt':
-            return Path(os.environ.get('PROGRAMDATA', 'C:\\ProgramData')) / "Better11" / "config.toml"
-        else:
-            return Path("/etc/better11/config.toml")
+        force_windows = os.environ.get('BETTER11_FORCE_WINDOWS_PATH', '').lower() in {'1', 'true', 'yes'}
+
+        if os.name == 'nt' or force_windows:
+            # Use PureWindowsPath to avoid instantiating WindowsPath on non-Windows hosts
+            program_data = PureWindowsPath(os.environ.get('PROGRAMDATA', 'C:\\ProgramData'))
+            return Path(str(program_data / "Better11" / "config.toml"))
+
+        return Path("/etc/better11/config.toml")
     
     def validate(self) -> bool:
         """Validate configuration values.

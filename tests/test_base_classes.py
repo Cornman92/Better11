@@ -57,15 +57,17 @@ class TestSystemTool:
         tool = MockSystemTool(config=config)
         assert tool.config == config
     
-    def test_tool_dry_run_mode(self):
+    def test_tool_dry_run_mode(self, monkeypatch):
         """Test tool in dry-run mode."""
+        monkeypatch.setattr("system_tools.base.ensure_windows", lambda: None)
         tool = MockSystemTool(dry_run=True)
         assert tool.dry_run is True
         result = tool.run(skip_confirmation=True)
         assert result is True  # Dry run should succeed
-    
-    def test_tool_run_success(self):
+
+    def test_tool_run_success(self, monkeypatch):
         """Test successful tool execution."""
+        monkeypatch.setattr("system_tools.base.ensure_windows", lambda: None)
         tool = MockSystemTool()
         result = tool.run(skip_confirmation=True)
         assert result is True
