@@ -88,7 +88,7 @@ class TestStartupManager:
     def test_manager_dry_run(self):
         """Test manager with dry-run mode."""
         manager = StartupManager(dry_run=True)
-        assert manager._dry_run is True
+        assert manager.dry_run is True
 
     def test_list_startup_items_structure(self):
         """Test that list_startup_items returns a list."""
