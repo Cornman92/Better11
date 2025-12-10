@@ -4,9 +4,13 @@ import argparse
 import sys
 from pathlib import Path
 
+import click
+
 from better11.apps.download import DownloadError
 from better11.apps.manager import AppManager, DependencyError
 from better11.apps.verification import VerificationError
+from better11.deployment import WindowsDeploymentManager
+from better11.windows_ops import UnsupportedPlatformError, is_windows
 
 
 def build_manager(catalog_path: Path) -> AppManager:
@@ -87,8 +91,115 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _create_deployment_manager() -> WindowsDeploymentManager:
+    return WindowsDeploymentManager()
+
+
+@click.group(help="Deployment workflows for Windows images.")
+def deploy() -> None:
+    """Manage Windows deployment tasks."""
+
+
+@deploy.command("capture")
+@click.argument("source_volume")
+@click.argument("destination_image")
+@click.option("--name", "image_name", required=True, help="Friendly name for the captured image")
+@click.option("--description", help="Optional description for the image")
+@click.option("--esd", "compress_to_esd", is_flag=True, help="Capture using ESD compression")
+def deploy_capture(source_volume: str, destination_image: str, image_name: str, description: str | None, compress_to_esd: bool) -> None:
+    """Capture a Windows volume to a WIM/ESD image."""
+
+    if not is_windows():
+        click.echo("Deployment commands are only available on Windows.", err=True)
+        raise SystemExit(1)
+
+    manager = _create_deployment_manager()
+    try:
+        manager.capture_image(
+            source_volume,
+            destination_image,
+            image_name=image_name,
+            description=description,
+            compress_to_esd=compress_to_esd,
+        )
+    except UnsupportedPlatformError as exc:
+        raise click.ClickException(str(exc))
+    click.echo(f"Captured {source_volume} to {destination_image}")
+
+
+@deploy.command("apply")
+@click.argument("image_path")
+@click.argument("target_partition")
+@click.option("--index", default=1, show_default=True, type=int, help="Image index to apply")
+@click.option("--skip-verify", is_flag=True, help="Skip DISM integrity verification")
+def deploy_apply(image_path: str, target_partition: str, index: int, skip_verify: bool) -> None:
+    """Apply a captured image to a target partition."""
+
+    if not is_windows():
+        click.echo("Deployment commands are only available on Windows.", err=True)
+        raise SystemExit(1)
+
+    manager = _create_deployment_manager()
+    try:
+        manager.apply_image(image_path, target_partition, index=index, verify=not skip_verify)
+    except UnsupportedPlatformError as exc:
+        raise click.ClickException(str(exc))
+    click.echo(f"Applied image index {index} from {image_path} to {target_partition}")
+
+
+@deploy.command("service")
+@click.argument("image_path")
+@click.argument("mount_dir")
+@click.option("--index", default=1, show_default=True, type=int, help="Image index to mount")
+@click.option("--driver", "drivers", multiple=True, help="Driver folder or INF to inject (repeatable)")
+@click.option("--feature", "features", multiple=True, help="Windows feature name to enable (repeatable)")
+@click.option("--update", "updates", multiple=True, help=".cab or .msu update package to add (repeatable)")
+@click.option("--commit/--discard", default=True, show_default=True, help="Commit or discard servicing changes")
+def deploy_service(
+    image_path: str,
+    mount_dir: str,
+    index: int,
+    drivers: tuple[str, ...],
+    features: tuple[str, ...],
+    updates: tuple[str, ...],
+    commit: bool,
+) -> None:
+    """Mount and service an offline Windows image."""
+
+    if not is_windows():
+        click.echo("Deployment commands are only available on Windows.", err=True)
+        raise SystemExit(1)
+
+    manager = _create_deployment_manager()
+    try:
+        manager.service_image(
+            image_path,
+            mount_dir,
+            index=index,
+            drivers=list(drivers),
+            features=list(features),
+            updates=list(updates),
+            commit=commit,
+        )
+    except UnsupportedPlatformError as exc:
+        raise click.ClickException(str(exc))
+    click.echo("Servicing completed")
+
+
+def _run_deploy(argv: list[str]) -> int:
+    try:
+        deploy.main(args=argv, prog_name="better11 deploy", standalone_mode=False)
+    except SystemExit as exc:
+        return int(exc.code)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv or sys.argv[1:])
+    argv = argv or sys.argv[1:]
+    if argv and argv[0] == "deploy":
+        return _run_deploy(argv[1:])
+
+    args = parse_args(argv)
     manager = build_manager(args.catalog)
 
     if args.command == "list":

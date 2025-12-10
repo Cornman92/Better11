@@ -144,6 +144,23 @@ preset = PerformancePreset(
 apply_performance_preset(preset)
 ```
 
+### Deployment
+
+Better11 provides a deployment workflow powered by DISM and PowerShell for capturing, applying, and servicing Windows images.
+
+```bash
+# Capture a Windows volume into a WIM (use --esd for ESD compression)
+python -m better11.cli deploy capture C:\\ D:\\images\\custom.wim --name "Custom Image" --description "Post-setup snapshot"
+
+# Apply an image to a target partition
+python -m better11.cli deploy apply D:\\images\\custom.wim D:\\target --index 1
+
+# Mount and service an image (add drivers, enable features, and stage updates)
+python -m better11.cli deploy service D:\\images\\custom.wim D:\\mount --driver D:\\drivers --feature NetFX3 --update D:\\updates\\kb123456.msu
+```
+
+Deployment commands gracefully report errors on non-Windows hosts and require DISM/PowerShell to be available in the system PATH.
+
 ## Documentation
 
 ### User Documentation
