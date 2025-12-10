@@ -38,6 +38,8 @@ namespace Better11.WinUI
                     services.AddTransient<SystemToolsViewModel>();
                     services.AddTransient<PrivacyViewModel>();
                     services.AddTransient<WindowsUpdatesViewModel>();
+                    services.AddTransient<StartupViewModel>();
+                    services.AddTransient<PerformanceViewModel>();
                     services.AddTransient<SettingsViewModel>();
 
                     // Register views
@@ -46,6 +48,8 @@ namespace Better11.WinUI
                     services.AddTransient<SystemToolsPage>();
                     services.AddTransient<PrivacyPage>();
                     services.AddTransient<WindowsUpdatesPage>();
+                    services.AddTransient<StartupPage>();
+                    services.AddTransient<PerformancePage>();
                     services.AddTransient<SettingsPage>();
                 })
                 .Build();

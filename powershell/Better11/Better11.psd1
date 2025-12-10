@@ -17,7 +17,10 @@
         'Modules\Security\Security.psd1',
         'Modules\AppManager\AppManager.psd1',
         'Modules\SystemTools\SystemTools.psd1',
-        'Modules\Updates\Updates.psd1'
+        'Modules\Updates\Updates.psd1',
+        'Modules\Backup\Backup.psd1',
+        'Modules\Performance\Performance.psd1',
+        'Modules\Network\Network.psd1'
     )
     
     # Functions to export
@@ -60,7 +63,29 @@
         'Install-Better11WindowsUpdate',
         'Set-Better11UpdatePolicy',
         'Suspend-Better11Updates',
-        'Resume-Better11Updates'
+        'Resume-Better11Updates',
+        
+        # Backup
+        'New-Better11Backup',
+        'Restore-Better11Backup',
+        'Get-Better11BackupList',
+        'Remove-Better11Backup',
+        'Export-Better11Configuration',
+        'Import-Better11Configuration',
+        
+        # Performance
+        'Get-Better11SystemInfo',
+        'Get-Better11PerformanceMetrics',
+        'Optimize-Better11Performance',
+        'Get-Better11StartupImpact',
+        'Test-Better11SystemHealth',
+        
+        # Network
+        'Get-Better11NetworkInfo',
+        'Test-Better11NetworkSpeed',
+        'Reset-Better11Network',
+        'Optimize-Better11NetworkSettings',
+        'Get-Better11ActiveConnections'
     )
     
     CmdletsToExport = @()

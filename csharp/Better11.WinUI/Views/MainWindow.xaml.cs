@@ -42,7 +42,10 @@ namespace Better11.WinUI.Views
                         ContentFrame.Navigate(typeof(PrivacyPage));
                         break;
                     case "startup":
-                        // ContentFrame.Navigate(typeof(StartupPage));
+                        ContentFrame.Navigate(typeof(StartupPage));
+                        break;
+                    case "performance":
+                        ContentFrame.Navigate(typeof(PerformancePage));
                         break;
                     case "features":
                         // ContentFrame.Navigate(typeof(FeaturesPage));

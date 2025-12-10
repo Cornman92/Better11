@@ -76,6 +76,14 @@
                 </NavigationViewItem>
                 
                 <NavigationViewItem 
+                    Content="Performance" 
+                    Tag="performance">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE9D9;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem 
                     Content="Features" 
                     Tag="features">
                     <NavigationViewItem.Icon>
