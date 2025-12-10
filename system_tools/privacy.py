@@ -135,8 +135,38 @@ class PrivacyManager(SystemTool):
             True if successful
         """
         _LOGGER.info("Setting telemetry level to %s", level.name)
-        # TODO: Set registry key at HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
-        raise NotImplementedError("Telemetry control - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would set telemetry level to %s", level.value)
+            return True
+        
+        try:
+            import platform
+            if platform.system() != "Windows":
+                _LOGGER.warning("Telemetry control only available on Windows")
+                return False
+            
+            import winreg
+            
+            # Registry key for telemetry
+            key_path = r"SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+            
+            # Create/open the key
+            key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, key_path)
+            
+            # Set the AllowTelemetry value
+            winreg.SetValueEx(key, "AllowTelemetry", 0, winreg.REG_DWORD, level.value)
+            
+            winreg.CloseKey(key)
+            _LOGGER.info("Telemetry level set to %s", level.name)
+            return True
+        
+        except PermissionError:
+            _LOGGER.error("Permission denied - admin rights required")
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to set telemetry level: %s", exc)
+            return False
     
     def get_telemetry_level(self) -> TelemetryLevel:
         """Get current Windows telemetry level.
@@ -146,8 +176,40 @@ class PrivacyManager(SystemTool):
         TelemetryLevel
             Current telemetry level
         """
-        # TODO: Read from registry
-        raise NotImplementedError("Get telemetry level - coming in v0.3.0")
+        try:
+            import platform
+            if platform.system() != "Windows":
+                _LOGGER.warning("Telemetry control only available on Windows")
+                return TelemetryLevel.FULL  # Default assumption
+            
+            import winreg
+            
+            # Try to read from policy key first
+            key_path = r"SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+            
+            try:
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path, 0, winreg.KEY_READ)
+                value, _ = winreg.QueryValueEx(key, "AllowTelemetry")
+                winreg.CloseKey(key)
+                
+                # Map value to enum
+                if value == 0:
+                    return TelemetryLevel.SECURITY
+                elif value == 1:
+                    return TelemetryLevel.BASIC
+                elif value == 2:
+                    return TelemetryLevel.ENHANCED
+                else:
+                    return TelemetryLevel.FULL
+            
+            except FileNotFoundError:
+                # Key doesn't exist, return default
+                _LOGGER.debug("Telemetry policy key not found, assuming FULL")
+                return TelemetryLevel.FULL
+        
+        except Exception as exc:
+            _LOGGER.error("Failed to get telemetry level: %s", exc)
+            return TelemetryLevel.FULL
     
     def set_app_permission(self, setting: PrivacySetting, enabled: bool) -> bool:
         """Set an app permission.
@@ -193,8 +255,31 @@ class PrivacyManager(SystemTool):
             True if successful
         """
         _LOGGER.info("Disabling advertising ID")
-        # TODO: Set registry key
-        raise NotImplementedError("Disable advertising ID - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would disable advertising ID")
+            return True
+        
+        try:
+            import platform
+            if platform.system() != "Windows":
+                return False
+            
+            import winreg
+            
+            # Registry key for advertising ID
+            key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
+            
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path)
+            winreg.SetValueEx(key, "Enabled", 0, winreg.REG_DWORD, 0)
+            winreg.CloseKey(key)
+            
+            _LOGGER.info("Advertising ID disabled")
+            return True
+        
+        except Exception as exc:
+            _LOGGER.error("Failed to disable advertising ID: %s", exc)
+            return False
     
     def disable_cortana(self) -> bool:
         """Disable Cortana.
