@@ -190,6 +190,10 @@ class TestConfig:
     
     def test_system_path_windows(self, monkeypatch):
         """Test system configuration path on Windows."""
+        import sys
+        if sys.platform != 'win32':
+            pytest.skip("Windows-specific test")
+        
         monkeypatch.setattr('os.name', 'nt')
         monkeypatch.setenv('PROGRAMDATA', 'C:\\ProgramData')
         

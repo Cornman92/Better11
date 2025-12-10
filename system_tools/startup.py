@@ -1,12 +1,12 @@
-"""Startup program management.
+"""Windows startup program management.
 
-This module provides control over programs that run at Windows startup,
-including registry entries, startup folders, and scheduled tasks.
+This module provides functionality to list, enable, disable, and remove
+startup programs from various locations in Windows.
 """
 from __future__ import annotations
 
 import os
-import platform
+import subprocess
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -14,16 +14,25 @@ from typing import List, Optional
 
 from . import get_logger
 from .base import SystemTool, ToolMetadata
-from .safety import ensure_windows
+from .safety import SafetyError
 
 _LOGGER = get_logger(__name__)
 
+# Platform-specific imports
+try:
+    import winreg
+    WINREG_AVAILABLE = True
+except ImportError:
+    WINREG_AVAILABLE = False
+    _LOGGER.warning("winreg not available - startup management will be limited")
+
 
 class StartupLocation(Enum):
-    """Location where startup item is configured."""
-    
+    """Location where startup item is registered."""
     REGISTRY_HKLM_RUN = "hklm_run"
     REGISTRY_HKCU_RUN = "hkcu_run"
+    REGISTRY_HKLM_RUN_ONCE = "hklm_run_once"
+    REGISTRY_HKCU_RUN_ONCE = "hkcu_run_once"
     STARTUP_FOLDER_COMMON = "startup_common"
     STARTUP_FOLDER_USER = "startup_user"
     TASK_SCHEDULER = "task_scheduler"
@@ -31,8 +40,7 @@ class StartupLocation(Enum):
 
 
 class StartupImpact(Enum):
-    """Estimated impact of startup item on boot time."""
-    
+    """Estimated impact on boot time."""
     HIGH = "high"      # >3s delay
     MEDIUM = "medium"  # 1-3s delay
     LOW = "low"        # <1s delay
@@ -41,28 +49,41 @@ class StartupImpact(Enum):
 
 @dataclass
 class StartupItem:
-    """Representation of a startup program."""
+    """Represents a startup program.
     
+    Attributes
+    ----------
+    name : str
+        Display name of the startup item
+    command : str
+        Command or path that executes on startup
+    location : StartupLocation
+        Where the startup item is registered
+    enabled : bool
+        Whether the item is currently enabled
+    impact : StartupImpact
+        Estimated boot time impact
+    publisher : str, optional
+        Software publisher/vendor
+    """
     name: str
     command: str
     location: StartupLocation
     enabled: bool
     impact: StartupImpact = StartupImpact.UNKNOWN
     publisher: Optional[str] = None
-
-
-# Registry paths for startup items
-STARTUP_REGISTRY_PATHS = {
-    "HKLM": r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
-    "HKCU": r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
-}
+    
+    def __str__(self) -> str:
+        status = "✓" if self.enabled else "✗"
+        return f"{status} {self.name} [{self.location.value}]"
 
 
 class StartupManager(SystemTool):
     """Manage Windows startup programs.
     
-    This class provides methods to list, enable, disable, and remove
-    programs that run at Windows startup.
+    This tool provides comprehensive management of Windows startup programs,
+    including listing, enabling, disabling, and removing items from various
+    startup locations.
     
     Parameters
     ----------
@@ -70,10 +91,33 @@ class StartupManager(SystemTool):
         Configuration dictionary
     dry_run : bool
         If True, simulate operations without making changes
+    
+    Examples
+    --------
+    List all startup items:
+    
+    >>> manager = StartupManager()
+    >>> items = manager.list_startup_items()
+    >>> for item in items:
+    ...     print(f"{item.name}: {item.location.value}")
+    
+    Disable a startup item:
+    
+    >>> item = items[0]
+    >>> manager.disable_startup_item(item)
     """
     
-    def __init__(self, config: Optional[dict] = None, dry_run: bool = False):
-        super().__init__(config, dry_run)
+    # Registry keys to check
+    REGISTRY_KEYS = [
+        ("HKLM", r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+         StartupLocation.REGISTRY_HKLM_RUN),
+        ("HKCU", r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+         StartupLocation.REGISTRY_HKCU_RUN),
+        ("HKLM", r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+         StartupLocation.REGISTRY_HKLM_RUN_ONCE),
+        ("HKCU", r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+         StartupLocation.REGISTRY_HKCU_RUN_ONCE),
+    ]
     
     def get_metadata(self) -> ToolMetadata:
         """Return tool metadata."""
@@ -81,17 +125,28 @@ class StartupManager(SystemTool):
             name="Startup Manager",
             description="Manage Windows startup programs",
             version="0.3.0",
-            requires_admin=False,  # Most operations don't need admin
+            requires_admin=False,  # Reading doesn't need admin
             requires_restart=False,
-            category="optimization"
+            category="performance"
         )
     
     def validate_environment(self) -> None:
-        """Validate environment for startup management."""
-        pass
+        """Validate environment prerequisites."""
+        if not WINREG_AVAILABLE and os.name != 'posix':
+            # On Windows, winreg should be available
+            if os.name == 'nt':
+                raise SafetyError("winreg module not available on Windows")
+        
+        # On non-Windows, we allow it for testing but log warning
+        if os.name != 'nt':
+            _LOGGER.debug("Running on non-Windows system - some features may not work")
     
-    def execute(self) -> bool:
-        """Execute default startup listing operation."""
+    def execute(self, *args, **kwargs) -> bool:
+        """Execute startup management.
+        
+        This is called by the base class run() method.
+        For now, just lists items as a validation.
+        """
         items = self.list_startup_items()
         _LOGGER.info("Found %d startup items", len(items))
         return True
@@ -102,117 +157,69 @@ class StartupManager(SystemTool):
         Returns
         -------
         List[StartupItem]
-            List of all startup items
+            All discovered startup items
+        
+        Examples
+        --------
+        >>> manager = StartupManager()
+        >>> items = manager.list_startup_items()
+        >>> print(f"Found {len(items)} startup items")
         """
-        _LOGGER.info("Listing startup items from all locations")
+        items = []
         
-        items: List[StartupItem] = []
+        if WINREG_AVAILABLE:
+            items.extend(self._get_registry_items())
+        else:
+            _LOGGER.debug("Skipping registry items (winreg not available)")
         
-        # Get items from registry
-        items.extend(self._get_registry_items())
-        
-        # Get items from startup folders
         items.extend(self._get_startup_folder_items())
         
-        # TODO: Add scheduled tasks and services
+        # TODO: Add scheduled tasks
+        # TODO: Add services
         
-        _LOGGER.info("Found %d startup items", len(items))
+        _LOGGER.info("Listed %d startup items", len(items))
         return items
     
     def _get_registry_items(self) -> List[StartupItem]:
-        """Get startup items from Windows registry.
+        """Get startup items from registry.
         
         Returns
         -------
         List[StartupItem]
-            Startup items from registry
+            Startup items found in registry keys
         """
-        items: List[StartupItem] = []
+        if not WINREG_AVAILABLE:
+            return []
         
-        if platform.system() != "Windows":
-            _LOGGER.debug("Not on Windows, skipping registry enumeration")
-            return items
+        items = []
         
-        try:
-            import winreg
-        except ImportError:
-            _LOGGER.warning("winreg not available, skipping registry enumeration")
-            return items
-        
-        # Check HKLM Run key
-        try:
-            key = winreg.OpenKey(
-                winreg.HKEY_LOCAL_MACHINE,
-                STARTUP_REGISTRY_PATHS["HKLM"],
-                0,
-                winreg.KEY_READ
-            )
-            items.extend(self._enumerate_registry_key(key, StartupLocation.REGISTRY_HKLM_RUN))
-            winreg.CloseKey(key)
-        except FileNotFoundError:
-            _LOGGER.debug("HKLM Run key not found")
-        except PermissionError:
-            _LOGGER.warning("No permission to read HKLM Run key")
-        except Exception as exc:
-            _LOGGER.error("Error reading HKLM Run key: %s", exc)
-        
-        # Check HKCU Run key
-        try:
-            key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER,
-                STARTUP_REGISTRY_PATHS["HKCU"],
-                0,
-                winreg.KEY_READ
-            )
-            items.extend(self._enumerate_registry_key(key, StartupLocation.REGISTRY_HKCU_RUN))
-            winreg.CloseKey(key)
-        except FileNotFoundError:
-            _LOGGER.debug("HKCU Run key not found")
-        except Exception as exc:
-            _LOGGER.error("Error reading HKCU Run key: %s", exc)
-        
-        return items
-    
-    def _enumerate_registry_key(self, key, location: StartupLocation) -> List[StartupItem]:
-        """Enumerate a registry key for startup items.
-        
-        Parameters
-        ----------
-        key
-            Open registry key handle
-        location : StartupLocation
-            Location type for these items
-        
-        Returns
-        -------
-        List[StartupItem]
-            Startup items from this key
-        """
-        import winreg
-        
-        items: List[StartupItem] = []
-        index = 0
-        
-        while True:
+        for hive_name, subkey, location in self.REGISTRY_KEYS:
+            # Get the hive constant
+            hive = getattr(winreg, f'HKEY_{hive_name.replace("HK", "")}')
+            
             try:
-                name, command, value_type = winreg.EnumValue(key, index)
-                
-                if command and isinstance(command, str):
-                    item = StartupItem(
-                        name=name,
-                        command=command,
-                        location=location,
-                        enabled=True,  # If in registry, it's enabled
-                        impact=StartupImpact.UNKNOWN
-                    )
-                    items.append(item)
-                    _LOGGER.debug("Found startup item: %s -> %s", name, command)
-                
-                index += 1
-            except OSError:
-                # No more items
-                break
+                with winreg.OpenKey(hive, subkey) as key:
+                    i = 0
+                    while True:
+                        try:
+                            name, command, _ = winreg.EnumValue(key, i)
+                            items.append(StartupItem(
+                                name=name,
+                                command=command,
+                                location=location,
+                                enabled=True  # In registry = enabled
+                            ))
+                            i += 1
+                        except OSError:
+                            # No more values
+                            break
+            except FileNotFoundError:
+                _LOGGER.debug("Registry key not found: %s\\%s", hive_name, subkey)
+            except Exception as exc:
+                _LOGGER.warning("Failed to read registry %s\\%s: %s", 
+                              hive_name, subkey, exc)
         
+        _LOGGER.debug("Found %d registry startup items", len(items))
         return items
     
     def _get_startup_folder_items(self) -> List[StartupItem]:
@@ -221,109 +228,105 @@ class StartupManager(SystemTool):
         Returns
         -------
         List[StartupItem]
-            Startup items from folders
+            Startup items found in startup folders
         """
-        items: List[StartupItem] = []
-        
-        if platform.system() != "Windows":
-            _LOGGER.debug("Not on Windows, skipping startup folders")
-            return items
-        
-        # Common startup folder (all users)
-        try:
-            programdata = os.environ.get('PROGRAMDATA', 'C:\\ProgramData')
-            common_startup = Path(programdata) / 'Microsoft' / 'Windows' / 'Start Menu' / 'Programs' / 'Startup'
-            items.extend(self._enumerate_startup_folder(common_startup, StartupLocation.STARTUP_FOLDER_COMMON))
-        except Exception as exc:
-            _LOGGER.error("Error reading common startup folder: %s", exc)
+        items = []
         
         # User startup folder
-        try:
-            appdata = os.environ.get('APPDATA', '')
-            if appdata:
-                user_startup = Path(appdata) / 'Microsoft' / 'Windows' / 'Start Menu' / 'Programs' / 'Startup'
-                items.extend(self._enumerate_startup_folder(user_startup, StartupLocation.STARTUP_FOLDER_USER))
-        except Exception as exc:
-            _LOGGER.error("Error reading user startup folder: %s", exc)
+        appdata = os.environ.get('APPDATA', '')
+        if appdata:
+            user_startup = Path(appdata) / \
+                'Microsoft/Windows/Start Menu/Programs/Startup'
+        else:
+            user_startup = Path.home() / \
+                'AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup'
         
-        return items
-    
-    def _enumerate_startup_folder(self, folder: Path, location: StartupLocation) -> List[StartupItem]:
-        """Enumerate a startup folder for items.
+        # Common startup folder
+        programdata = os.environ.get('PROGRAMDATA', '')
+        if programdata:
+            common_startup = Path(programdata) / \
+                'Microsoft/Windows/Start Menu/Programs/Startup'
+        else:
+            common_startup = Path('C:/ProgramData/Microsoft/Windows/Start Menu/Programs/Startup')
         
-        Parameters
-        ----------
-        folder : Path
-            Startup folder path
-        location : StartupLocation
-            Location type
+        for folder, location in [
+            (user_startup, StartupLocation.STARTUP_FOLDER_USER),
+            (common_startup, StartupLocation.STARTUP_FOLDER_COMMON)
+        ]:
+            if folder.exists():
+                for item in folder.iterdir():
+                    if item.is_file() and item.suffix.lower() in {'.lnk', '.exe', '.bat', '.cmd'}:
+                        items.append(StartupItem(
+                            name=item.stem,
+                            command=str(item),
+                            location=location,
+                            enabled=True
+                        ))
+            else:
+                _LOGGER.debug("Startup folder not found: %s", folder)
         
-        Returns
-        -------
-        List[StartupItem]
-            Startup items from folder
-        """
-        items: List[StartupItem] = []
-        
-        if not folder.exists():
-            _LOGGER.debug("Startup folder does not exist: %s", folder)
-            return items
-        
-        try:
-            for item_path in folder.iterdir():
-                if item_path.is_file():
-                    # Get the shortcut target if it's a .lnk file
-                    command = str(item_path)
-                    
-                    item = StartupItem(
-                        name=item_path.stem,
-                        command=command,
-                        location=location,
-                        enabled=True,
-                        impact=StartupImpact.UNKNOWN
-                    )
-                    items.append(item)
-                    _LOGGER.debug("Found startup item in folder: %s", item_path.name)
-        except PermissionError:
-            _LOGGER.warning("No permission to read startup folder: %s", folder)
-        except Exception as exc:
-            _LOGGER.error("Error enumerating startup folder %s: %s", folder, exc)
-        
+        _LOGGER.debug("Found %d startup folder items", len(items))
         return items
     
     def enable_startup_item(self, item: StartupItem) -> bool:
-        """Enable a startup item.
+        """Enable a disabled startup item.
         
         Parameters
         ----------
         item : StartupItem
-            Startup item to enable
+            The startup item to enable
         
         Returns
         -------
         bool
             True if successful
+        
+        Raises
+        ------
+        SafetyError
+            If operation fails
         """
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would enable %s", item.name)
+            return True
+        
         _LOGGER.info("Enabling startup item: %s", item.name)
-        # TODO: Re-add to appropriate location
-        raise NotImplementedError("Enable startup item - coming in v0.3.0")
+        
+        # TODO: Implement enable logic based on location
+        # For registry: restore the value
+        # For folder: restore the file
+        
+        raise NotImplementedError("Enable functionality not yet implemented")
     
     def disable_startup_item(self, item: StartupItem) -> bool:
-        """Disable a startup item.
+        """Disable a startup item without removing it.
         
         Parameters
         ----------
         item : StartupItem
-            Startup item to disable
+            The startup item to disable
         
         Returns
         -------
         bool
             True if successful
+        
+        Raises
+        ------
+        SafetyError
+            If operation fails
         """
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would disable %s", item.name)
+            return True
+        
         _LOGGER.info("Disabling startup item: %s", item.name)
-        # TODO: Remove from startup location
-        raise NotImplementedError("Disable startup item - coming in v0.3.0")
+        
+        # TODO: Implement disable logic based on location
+        # For registry: rename value or delete it
+        # For folder: rename file or move it
+        
+        raise NotImplementedError("Disable functionality not yet implemented")
     
     def remove_startup_item(self, item: StartupItem) -> bool:
         """Permanently remove a startup item.
@@ -331,16 +334,52 @@ class StartupManager(SystemTool):
         Parameters
         ----------
         item : StartupItem
-            Startup item to remove
+            The startup item to remove
         
         Returns
         -------
         bool
             True if successful
+        
+        Raises
+        ------
+        SafetyError
+            If operation fails
         """
+        if self.dry_run:
+            _LOGGER.info("DRY RUN: Would remove %s", item.name)
+            return True
+        
         _LOGGER.info("Removing startup item: %s", item.name)
-        # TODO: Delete from registry/folder/task scheduler
-        raise NotImplementedError("Remove startup item - coming in v0.3.0")
+        
+        # TODO: Implement remove logic based on location
+        
+        raise NotImplementedError("Remove functionality not yet implemented")
+    
+    def get_boot_time_estimate(self) -> float:
+        """Estimate total boot time impact from startup items.
+        
+        Returns
+        -------
+        float
+            Estimated boot time in seconds
+        """
+        items = self.list_startup_items()
+        
+        # Simple heuristic estimation
+        total_time = 0.0
+        for item in items:
+            if item.enabled:
+                if item.impact == StartupImpact.HIGH:
+                    total_time += 3.5
+                elif item.impact == StartupImpact.MEDIUM:
+                    total_time += 2.0
+                elif item.impact == StartupImpact.LOW:
+                    total_time += 0.5
+                else:
+                    total_time += 1.0  # Unknown impact
+        
+        return total_time
     
     def get_recommendations(self) -> List[str]:
         """Get startup optimization recommendations.
@@ -350,8 +389,44 @@ class StartupManager(SystemTool):
         List[str]
             List of optimization recommendations
         """
-        # TODO: Analyze startup items and provide recommendations
-        raise NotImplementedError("Startup recommendations - coming in v0.3.0")
+        items = self.list_startup_items()
+        recommendations = []
+        
+        enabled_count = sum(1 for item in items if item.enabled)
+        
+        if enabled_count > 15:
+            recommendations.append(
+                f"You have {enabled_count} startup items. "
+                "Consider disabling unnecessary items to improve boot time."
+            )
+        
+        high_impact = [item for item in items 
+                      if item.enabled and item.impact == StartupImpact.HIGH]
+        if high_impact:
+            recommendations.append(
+                f"Found {len(high_impact)} high-impact startup items. "
+                "Review these first for optimization."
+            )
+        
+        return recommendations
+
+
+def list_startup_items() -> List[StartupItem]:
+    """Convenience function to list startup items.
+    
+    Returns
+    -------
+    List[StartupItem]
+        All discovered startup items
+    
+    Examples
+    --------
+    >>> items = list_startup_items()
+    >>> for item in items:
+    ...     print(item.name)
+    """
+    manager = StartupManager()
+    return manager.list_startup_items()
 
 
 __all__ = [
@@ -359,4 +434,5 @@ __all__ = [
     "StartupImpact",
     "StartupItem",
     "StartupManager",
+    "list_startup_items",
 ]
