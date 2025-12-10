@@ -1,0 +1,69 @@
+{
+  "applications": [
+    {
+      "app_id": "demo-app-msi",
+      "name": "Demo Application (MSI)",
+      "version": "1.0.0",
+      "description": "A demonstration MSI installer for testing Better11",
+      "uri": "file://samples/demo-app.msi",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "installer_type": "msi",
+      "vetted_domains": ["localhost", "example.com"],
+      "dependencies": [],
+      "silent_args": ["/quiet", "/norestart"],
+      "uninstall_command": "msiexec /x {PRODUCT-GUID} /qn"
+    },
+    {
+      "app_id": "demo-app-exe",
+      "name": "Demo Application (EXE)",
+      "version": "1.0.0",
+      "description": "A demonstration EXE installer for testing Better11",
+      "uri": "file://samples/demo-app.exe",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "installer_type": "exe",
+      "vetted_domains": ["localhost", "example.com"],
+      "dependencies": [],
+      "silent_args": ["/S", "/VERYSILENT"],
+      "uninstall_command": null
+    },
+    {
+      "app_id": "vscode",
+      "name": "Visual Studio Code",
+      "version": "1.85.0",
+      "description": "Free source-code editor made by Microsoft for Windows, Linux and macOS",
+      "uri": "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64",
+      "sha256": "PLACEHOLDER_HASH_UPDATE_WITH_ACTUAL_HASH",
+      "installer_type": "exe",
+      "vetted_domains": ["code.visualstudio.com", "az764295.vo.msecnd.net"],
+      "dependencies": [],
+      "silent_args": ["/VERYSILENT", "/NORESTART", "/MERGETASKS=!runcode"],
+      "uninstall_command": null
+    },
+    {
+      "app_id": "git",
+      "name": "Git for Windows",
+      "version": "2.43.0",
+      "description": "Git is a free and open source distributed version control system",
+      "uri": "https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/Git-2.43.0-64-bit.exe",
+      "sha256": "PLACEHOLDER_HASH_UPDATE_WITH_ACTUAL_HASH",
+      "installer_type": "exe",
+      "vetted_domains": ["github.com", "objects.githubusercontent.com"],
+      "dependencies": [],
+      "silent_args": ["/VERYSILENT", "/NORESTART"],
+      "uninstall_command": null
+    },
+    {
+      "app_id": "7zip",
+      "name": "7-Zip",
+      "version": "23.01",
+      "description": "7-Zip is a file archiver with a high compression ratio",
+      "uri": "https://www.7-zip.org/a/7z2301-x64.exe",
+      "sha256": "PLACEHOLDER_HASH_UPDATE_WITH_ACTUAL_HASH",
+      "installer_type": "exe",
+      "vetted_domains": ["7-zip.org"],
+      "dependencies": [],
+      "silent_args": ["/S"],
+      "uninstall_command": null
+    }
+  ]
+}
