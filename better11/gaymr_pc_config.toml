@@ -1,0 +1,29 @@
+# GaYmR-PC integration defaults
+# This file is optional and is not automatically loaded. It mirrors the
+# "gaymr_pc" section of the Better11 configuration schema to make it easy to
+# distribute environment-specific overrides.
+
+[gaymr_pc]
+# Toggle integration on or off. When disabled, Better11 will not attempt to
+# discover or initialize GaYmR-PC.
+enabled = false
+
+# Select how GaYmR-PC is provided. Supported values: "service" or "library".
+source = "service"
+
+# Name of the Windows service to query when source = "service".
+service_name = "GaYmR-PC"
+
+# Path to the on-disk library when source = "library". This is ignored when
+# the integration is configured to use the service distribution.
+library_path = "C:/Program Files/GaYmR-PC/gaymr_pc.dll"
+
+# Minimum version Better11 expects to find. If the detected version is lower
+# than this baseline the integration will be marked incompatible.
+minimum_version = "1.0.0"
+
+# Licensing metadata is provided for auditability. Better11 does not include or
+# redistribute GaYmR-PC binaries and expects operators to supply them alongside
+# an appropriate license grant.
+license_name = "External vendor license"
+license_url = "https://vendor.example.com/gaymr-pc/license"

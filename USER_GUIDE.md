@@ -255,6 +255,88 @@ Applications are defined in `better11/apps/catalog.json`:
 
 System tools require administrator privileges. Always run as Administrator.
 
+### GaYmR-PC Integration
+
+GaYmR-PC is treated as an external, vendor-supplied Windows service that
+provides performance controls Better11 can query. Better11 does **not** bundle
+the GaYmR-PC binaries or redistribute its license; you must provision the
+service separately and accept the vendor terms before enabling the integration.
+
+- **Purpose:** Coordinate with the GaYmR-PC service for performance telemetry
+  and tuning decisions without embedding vendor code.
+- **Distribution:** Supported as a Windows service (`service`) or as a local
+  library (`library`) that Better11 can probe for compatibility. The default is
+  `service` to avoid DLL coupling.
+- **Compatibility:** Windows 10/11 only. Enabling on non-Windows hosts will
+  mark the integration as incompatible but will not crash Better11.
+- **Licensing:** See your GaYmR-PC vendor agreement. Better11 tracks license
+  metadata (name and URL) for audit purposes but does not alter licensing
+  obligations.
+
+#### Configure
+
+The `gaymr_pc` configuration section controls the integration. You can copy
+`better11/gaymr_pc_config.toml` alongside your deployment to start from the
+documented defaults.
+
+```toml
+[gaymr_pc]
+enabled = true
+source = "service"        # or "library"
+service_name = "GaYmR-PC"  # used when source = "service"
+library_path = "C:/Program Files/GaYmR-PC/gaymr_pc.dll"  # used when source = "library"
+minimum_version = "1.2.0"
+license_name = "GaYmR-PC Commercial License"
+license_url = "https://vendor.example.com/gaymr-pc/eula"
+```
+
+Environment overrides are available for automated deployments:
+
+- `BETTER11_GAYMR_PC_ENABLED=true|false`
+- `BETTER11_GAYMR_PC_SOURCE=service|library`
+
+#### Initialize at Runtime
+
+Use `GaYmRPCInitializer` to perform one-time startup checks and collect a
+compatibility verdict without attempting privileged operations. Initialization
+is safe to call even when the feature flag is disabled.
+
+```python
+from better11.config import Config
+from better11.gaymr_pc import GaYmRPCInitializer
+
+config = Config.load()
+initializer = GaYmRPCInitializer(
+    enabled=config.gaymr_pc.enabled,
+    source=config.gaymr_pc.source,
+    service_name=config.gaymr_pc.service_name,
+    library_path=config.gaymr_pc.library_path,
+    minimum_version=config.gaymr_pc.minimum_version,
+)
+result = initializer.initialize()
+print(result.reason)
+```
+
+#### Deployment Checklist
+
+1. Install the GaYmR-PC service or library from the vendor (Better11 does not
+   ship installers).
+2. Confirm the service name or library path matches your environment.
+3. Set `gaymr_pc.enabled` to `true` in your config or set the environment
+   override for your deployment system.
+4. Run initialization once to confirm compatibility before hooking into
+   automation or GUI workflows.
+
+#### Troubleshooting
+
+- **Service not found:** Verify the service name in `service_name` matches the
+  installed GaYmR-PC instance and that the service is running.
+- **Incompatible platform:** Ensure the integration is only enabled on Windows
+  hosts; Linux/macOS will deliberately report incompatibility.
+- **License concerns:** Review `license_name` and `license_url` fields so your
+  audit tooling can point operators to the correct vendor terms. Better11 does
+  not change license obligations.
+
 ### Registry Tweaks
 
 #### Apply Single Registry Tweak

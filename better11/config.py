@@ -14,6 +14,10 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Optional, Any, Dict
 
+import platform
+
+from better11.interfaces import Version
+
 try:
     import tomllib  # Python 3.11+
 except ImportError:
@@ -52,11 +56,24 @@ class ApplicationsConfig:
 @dataclass
 class SystemToolsConfig:
     """System tools configuration."""
-    
+
     always_create_restore_point: bool = True
     confirm_destructive_actions: bool = True
     backup_registry: bool = True
     safety_level: str = "high"  # low, medium, high, paranoid
+
+
+@dataclass
+class GaYmRPCConfig:
+    """GaYmR-PC integration configuration."""
+
+    enabled: bool = False
+    source: str = "service"  # service or library
+    service_name: str = "GaYmR-PC"
+    library_path: str = "C:/Program Files/GaYmR-PC/gaymr_pc.dll"
+    minimum_version: str = "1.0.0"
+    license_name: str = "External vendor license"
+    license_url: str = "https://vendor.example.com/gaymr-pc/license"
 
 
 @dataclass
@@ -118,6 +135,7 @@ class Config:
     better11: Better11Config = field(default_factory=Better11Config)
     applications: ApplicationsConfig = field(default_factory=ApplicationsConfig)
     system_tools: SystemToolsConfig = field(default_factory=SystemToolsConfig)
+    gaymr_pc: GaYmRPCConfig = field(default_factory=GaYmRPCConfig)
     gui: GUIConfig = field(default_factory=GUIConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     
@@ -185,6 +203,7 @@ class Config:
             better11=Better11Config(**data.get('better11', {})),
             applications=ApplicationsConfig(**data.get('applications', {})),
             system_tools=SystemToolsConfig(**data.get('system_tools', {})),
+            gaymr_pc=GaYmRPCConfig(**data.get('gaymr_pc', {})),
             gui=GUIConfig(**data.get('gui', {})),
             logging=LoggingConfig(**data.get('logging', {})),
         )
@@ -199,10 +218,16 @@ class Config:
         # Simple implementation - can be expanded
         if 'BETTER11_AUTO_UPDATE' in os.environ:
             config.better11.auto_update = os.environ['BETTER11_AUTO_UPDATE'].lower() == 'true'
-        
+
         if 'BETTER11_LOG_LEVEL' in os.environ:
             config.logging.level = os.environ['BETTER11_LOG_LEVEL']
-        
+
+        if 'BETTER11_GAYMR_PC_ENABLED' in os.environ:
+            config.gaymr_pc.enabled = os.environ['BETTER11_GAYMR_PC_ENABLED'].lower() == 'true'
+
+        if 'BETTER11_GAYMR_PC_SOURCE' in os.environ:
+            config.gaymr_pc.source = os.environ['BETTER11_GAYMR_PC_SOURCE']
+
         return config
     
     def save(self, path: Optional[Path] = None) -> None:
@@ -224,6 +249,7 @@ class Config:
             'better11': asdict(self.better11),
             'applications': asdict(self.applications),
             'system_tools': asdict(self.system_tools),
+            'gaymr_pc': asdict(self.gaymr_pc),
             'gui': asdict(self.gui),
             'logging': asdict(self.logging),
         }
@@ -279,10 +305,11 @@ class Config:
         Path
             System configuration file path (C:\\ProgramData\\Better11\\config.toml on Windows)
         """
-        if os.name == 'nt':
-            return Path(os.environ.get('PROGRAMDATA', 'C:\\ProgramData')) / "Better11" / "config.toml"
-        else:
-            return Path("/etc/better11/config.toml")
+        if platform.system().lower() == 'windows':
+            program_data = os.environ.get('PROGRAMDATA', 'C:\\ProgramData')
+            return Path(program_data) / "Better11" / "config.toml"
+
+        return Path("/etc/better11/config.toml")
     
     def validate(self) -> bool:
         """Validate configuration values.
@@ -304,7 +331,17 @@ class Config:
                 f"Invalid safety_level: {self.system_tools.safety_level}. "
                 f"Must be one of {valid_safety_levels}"
             )
-        
+
+        valid_sources = {'service', 'library'}
+        if self.gaymr_pc.source not in valid_sources:
+            raise ValueError(
+                f"Invalid GaYmR-PC source: {self.gaymr_pc.source}. "
+                f"Must be one of {valid_sources}"
+            )
+
+        # Validate GaYmR-PC version string
+        Version.parse(self.gaymr_pc.minimum_version)
+
         # Validate theme
         valid_themes = {'system', 'light', 'dark'}
         if self.gui.theme not in valid_themes:
@@ -334,6 +371,7 @@ class Config:
             'better11': asdict(self.better11),
             'applications': asdict(self.applications),
             'system_tools': asdict(self.system_tools),
+            'gaymr_pc': asdict(self.gaymr_pc),
             'gui': asdict(self.gui),
             'logging': asdict(self.logging),
         }
@@ -361,6 +399,7 @@ __all__ = [
     "Better11Config",
     "ApplicationsConfig",
     "SystemToolsConfig",
+    "GaYmRPCConfig",
     "GUIConfig",
     "LoggingConfig",
     "Config",
