@@ -1,0 +1,177 @@
+<Page
+    x:Class="Better11.App.Views.DashboardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Better11.App.ViewModels"
+    mc:Ignorable="d">
+
+    <Page.DataContext>
+        <vm:DashboardViewModel x:Name="ViewModel"/>
+    </Page.DataContext>
+
+    <ScrollViewer>
+        <StackPanel Padding="24" Spacing="24">
+
+            <!-- Header -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Dashboard" Style="{StaticResource TitleLargeTextBlockStyle}"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE7EF;" FontSize="16" Foreground="{ThemeResource SystemAccentColor}" Visibility="{x:Bind ViewModel.IsAdministrator, Mode=OneWay}"/>
+                    <TextBlock Text="Running as Administrator" Visibility="{x:Bind ViewModel.IsAdministrator, Mode=OneWay}"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- System Information Cards -->
+            <StackPanel Spacing="16">
+                <TextBlock Text="System Information" Style="{StaticResource SubtitleTextBlockStyle}"/>
+
+                <Grid ColumnSpacing="16" RowSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Windows Version Card -->
+                    <Border Grid.Column="0" Grid.Row="0"
+                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                           CornerRadius="8"
+                           Padding="16">
+                        <StackPanel Spacing="8">
+                            <FontIcon Glyph="&#xE75C;" FontSize="24"/>
+                            <TextBlock Text="Windows Version" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.WindowsVersion, Mode=OneWay}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Uptime Card -->
+                    <Border Grid.Column="1" Grid.Row="0"
+                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                           CornerRadius="8"
+                           Padding="16">
+                        <StackPanel Spacing="8">
+                            <FontIcon Glyph="&#xE121;" FontSize="24"/>
+                            <TextBlock Text="System Uptime" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.SystemUptime, Mode=OneWay}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CPU Usage Card -->
+                    <Border Grid.Column="2" Grid.Row="0"
+                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                           CornerRadius="8"
+                           Padding="16">
+                        <StackPanel Spacing="8">
+                            <FontIcon Glyph="&#xE950;" FontSize="24"/>
+                            <TextBlock Text="CPU Usage" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.CpuUsage, Mode=OneWay}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Memory Usage Card -->
+                    <Border Grid.Column="0" Grid.Row="1"
+                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                           CornerRadius="8"
+                           Padding="16">
+                        <StackPanel Spacing="8">
+                            <FontIcon Glyph="&#xE7F4;" FontSize="24"/>
+                            <TextBlock Text="Memory Usage" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.MemoryUsage, Mode=OneWay}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Disk Usage Card -->
+                    <Border Grid.Column="1" Grid.Row="1"
+                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                           CornerRadius="8"
+                           Padding="16">
+                        <StackPanel Spacing="8">
+                            <FontIcon Glyph="&#xEDA2;" FontSize="24"/>
+                            <TextBlock Text="Disk Usage" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.DiskUsage, Mode=OneWay}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Refresh Button -->
+                    <Border Grid.Column="2" Grid.Row="1"
+                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                           CornerRadius="8"
+                           Padding="16">
+                        <Button Content="Refresh Info"
+                               Command="{x:Bind ViewModel.RefreshSystemInfoCommand}"
+                               HorizontalAlignment="Stretch"
+                               VerticalAlignment="Center"/>
+                    </Border>
+                </Grid>
+            </StackPanel>
+
+            <!-- Quick Actions -->
+            <StackPanel Spacing="16">
+                <TextBlock Text="Quick Actions" Style="{StaticResource SubtitleTextBlockStyle}"/>
+
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Image Editor Action -->
+                    <Button Grid.Column="0"
+                           Command="{x:Bind ViewModel.NavigateToImageEditorCommand}"
+                           HorizontalAlignment="Stretch"
+                           Height="120">
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                            <FontIcon Glyph="&#xE8B7;" FontSize="32"/>
+                            <TextBlock Text="Image Editor" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <TextBlock Text="Edit Windows Images"
+                                      Style="{StaticResource CaptionTextBlockStyle}"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- App Manager Action -->
+                    <Button Grid.Column="1"
+                           Command="{x:Bind ViewModel.NavigateToAppManagerCommand}"
+                           HorizontalAlignment="Stretch"
+                           Height="120">
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                            <FontIcon Glyph="&#xE74C;" FontSize="32"/>
+                            <TextBlock Text="App Manager" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <TextBlock Text="Install Applications"
+                                      Style="{StaticResource CaptionTextBlockStyle}"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Settings Action -->
+                    <Button Grid.Column="2"
+                           Command="{x:Bind ViewModel.NavigateToSettingsCommand}"
+                           HorizontalAlignment="Stretch"
+                           Height="120">
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                            <FontIcon Glyph="&#xE713;" FontSize="32"/>
+                            <TextBlock Text="Settings" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <TextBlock Text="Configure App"
+                                      Style="{StaticResource CaptionTextBlockStyle}"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </StackPanel>
+
+            <!-- Activity Indicator -->
+            <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}"
+                         Width="40"
+                         Height="40"
+                         Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}"/>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

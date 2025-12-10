@@ -40,6 +40,8 @@ public static class ServiceConfiguration
             // Register pages
             navService.RegisterPage("Dashboard", typeof(Views.DashboardView));
             navService.RegisterPage("Settings", typeof(Views.SettingsView));
+            navService.RegisterPage("ImageEditor", typeof(Views.ImageEditorView));
+            navService.RegisterPage("AppManager", typeof(Views.AppManagerView));
             // Add more page registrations as views are created
 
             return navService;
@@ -50,6 +52,8 @@ public static class ServiceConfiguration
         // Register ViewModels
         services.AddTransient<DashboardViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<ImageEditorViewModel>();
+        services.AddTransient<AppManagerViewModel>();
 
         // Register main window
         services.AddSingleton<MainWindow>();
