@@ -1,4 +1,5 @@
 """Tests for configuration management."""
+import os
 import tempfile
 from pathlib import Path
 
@@ -188,11 +189,12 @@ class TestConfig:
             with pytest.raises(ValueError, match="Unsupported configuration format"):
                 Config.load(path)
     
+    @pytest.mark.skipif(os.name != "nt", reason="Windows-specific system path")
     def test_system_path_windows(self, monkeypatch):
         """Test system configuration path on Windows."""
         monkeypatch.setattr('os.name', 'nt')
         monkeypatch.setenv('PROGRAMDATA', 'C:\\ProgramData')
-        
+
         path = Config.get_system_path()
         assert 'ProgramData' in str(path)
         assert 'Better11' in str(path)

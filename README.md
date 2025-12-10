@@ -104,6 +104,37 @@ python -m better11.cli uninstall demo-app
 python -m better11.cli --catalog /path/to/catalog.json list
 ```
 
+### Deployment Automation
+
+Better11 can generate Windows answer files (unattend.xml) to streamline image capture and deployment:
+
+```bash
+# Generate a basic unattended install file
+python -m better11.cli deploy unattend \
+  --product-key AAAAA-BBBBB-CCCCC-DDDDD-EEEEE \
+  --output ./artifacts/unattend.xml \
+  --language en-US \
+  --timezone "Pacific Standard Time" \
+  --admin-user Deployer \
+  --first-logon-command "1:echo post-setup"
+
+# Start from a prebuilt lab template and add an extra command
+python -m better11.cli deploy unattend \
+  --template lab \
+  --product-key AAAAA-BBBBB-CCCCC-DDDDD-EEEEE \
+  --output ./artifacts/unattend-lab.xml \
+  --first-logon-command "2:Install drivers|PowerShell -File .\\drivers.ps1"
+```
+
+Place the generated file alongside captured images and reference it during deployment, for example:
+
+```powershell
+dism /Apply-Image /ImageFile:D:\images\better11.wim /Index:1 /ApplyDir:C:\
+dism /Image:C:\ /Apply-Unattend:D:\images\unattend.xml
+```
+
+This keeps regional settings, administrator credentials, and first-logon automation consistent across capture/apply workflows.
+
 #### GUI
 
 ```bash
