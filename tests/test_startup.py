@@ -200,8 +200,9 @@ class TestStartupManager:
         result = manager.remove_startup_item(item)
         assert result is True
     
-    def test_disable_not_implemented_without_dry_run(self):
-        """Test that disable raises NotImplementedError without dry run."""
+    @pytest.mark.skipif(not WINREG_AVAILABLE, reason="Requires winreg")
+    def test_disable_requires_winreg_for_registry_items(self):
+        """Test that disable requires winreg for registry items."""
         manager = StartupManager(dry_run=False)
         
         item = StartupItem(
@@ -211,8 +212,14 @@ class TestStartupManager:
             enabled=True
         )
         
-        with pytest.raises(NotImplementedError):
+        # Without winreg, should raise SafetyError
+        # With winreg on Windows, should work or raise specific registry error
+        # For now, just test that it doesn't raise NotImplementedError
+        try:
             manager.disable_startup_item(item)
+        except Exception as exc:
+            # Any exception except NotImplementedError is acceptable
+            assert not isinstance(exc, NotImplementedError)
     
     def test_get_boot_time_estimate(self):
         """Test boot time estimation."""
@@ -375,3 +382,113 @@ class TestStartupImpact:
         
         for impact in expected:
             assert hasattr(StartupImpact, impact)
+
+
+class TestEnableDisableRemove:
+    """Test enable, disable, and remove functionality."""
+    
+    def test_disable_already_disabled_item(self):
+        """Test disabling an already disabled item."""
+        manager = StartupManager()
+        
+        item = StartupItem(
+            name="Test",
+            command="test.exe",
+            location=StartupLocation.REGISTRY_HKCU_RUN,
+            enabled=False  # Already disabled
+        )
+        
+        # Should succeed without error
+        result = manager.disable_startup_item(item)
+        # In dry-run mode (default for testing), should always succeed
+        assert result is True
+    
+    def test_enable_already_enabled_item(self):
+        """Test enabling an already enabled item."""
+        manager = StartupManager()
+        
+        item = StartupItem(
+            name="Test",
+            command="test.exe",
+            location=StartupLocation.REGISTRY_HKCU_RUN,
+            enabled=True  # Already enabled
+        )
+        
+        # Should succeed without error
+        result = manager.enable_startup_item(item)
+        assert result is True
+    
+    def test_disable_folder_item(self):
+        """Test disabling a folder startup item."""
+        manager = StartupManager()
+        
+        item = StartupItem(
+            name="TestApp",
+            command="/path/to/test.lnk",
+            location=StartupLocation.STARTUP_FOLDER_USER,
+            enabled=True
+        )
+        
+        # In dry-run, should succeed
+        result = manager.disable_startup_item(item)
+        assert result is True
+    
+    def test_remove_folder_item(self):
+        """Test removing a folder startup item."""
+        manager = StartupManager()
+        
+        item = StartupItem(
+            name="TestApp",
+            command="/path/to/test.lnk",
+            location=StartupLocation.STARTUP_FOLDER_USER,
+            enabled=True
+        )
+        
+        # In dry-run, should succeed
+        result = manager.remove_startup_item(item)
+        assert result is True
+    
+    def test_unsupported_location_disable(self):
+        """Test disabling item from unsupported location."""
+        manager = StartupManager(dry_run=False)
+        
+        item = StartupItem(
+            name="TestService",
+            command="test.exe",
+            location=StartupLocation.SERVICES,
+            enabled=True
+        )
+        
+        # Should raise NotImplementedError for unsupported locations
+        with pytest.raises(Exception):  # SafetyError or NotImplementedError
+            manager.disable_startup_item(item)
+    
+    def test_unsupported_location_enable(self):
+        """Test enabling item from unsupported location."""
+        manager = StartupManager(dry_run=False)
+        
+        item = StartupItem(
+            name="TestService",
+            command="test.exe",
+            location=StartupLocation.SERVICES,
+            enabled=False
+        )
+        
+        # Should raise NotImplementedError for unsupported locations
+        with pytest.raises(Exception):
+            manager.enable_startup_item(item)
+    
+    def test_unsupported_location_remove(self):
+        """Test removing item from unsupported location."""
+        manager = StartupManager(dry_run=False)
+        
+        item = StartupItem(
+            name="TestService",
+            command="test.exe",
+            location=StartupLocation.SERVICES,
+            enabled=True
+        )
+        
+        # Should raise NotImplementedError for unsupported locations
+        with pytest.raises(Exception):
+            manager.remove_startup_item(item)

@@ -132,6 +132,130 @@ def startup_info(args: argparse.Namespace) -> int:
         return 1
 
 
+def startup_disable(args: argparse.Namespace) -> int:
+    """Disable a startup item."""
+    if not STARTUP_AVAILABLE:
+        print("Startup management not available", file=sys.stderr)
+        return 1
+    
+    try:
+        manager = StartupManager()
+        items = manager.list_startup_items()
+        
+        # Find the item by name
+        item = next((i for i in items if i.name == args.name), None)
+        
+        if not item:
+            print(f"Startup item not found: {args.name}", file=sys.stderr)
+            print(f"\nAvailable items:")
+            for i in items:
+                print(f"  - {i.name}")
+            return 1
+        
+        if not item.enabled:
+            print(f"Item '{item.name}' is already disabled")
+            return 0
+        
+        # Confirm if not forced
+        if not args.force:
+            response = input(f"Disable '{item.name}'? [y/N]: ")
+            if response.lower() not in ['y', 'yes']:
+                print("Cancelled")
+                return 0
+        
+        # Disable the item
+        success = manager.disable_startup_item(item)
+        
+        if success:
+            print(f"✓ Disabled: {item.name}")
+            return 0
+        else:
+            print(f"✗ Failed to disable: {item.name}", file=sys.stderr)
+            return 1
+            
+    except Exception as exc:
+        print(f"Failed to disable startup item: {exc}", file=sys.stderr)
+        return 1
+
+
+def startup_enable(args: argparse.Namespace) -> int:
+    """Enable a startup item."""
+    if not STARTUP_AVAILABLE:
+        print("Startup management not available", file=sys.stderr)
+        return 1
+    
+    try:
+        manager = StartupManager()
+        items = manager.list_startup_items()
+        
+        # Find the item by name
+        item = next((i for i in items if i.name == args.name), None)
+        
+        if not item:
+            print(f"Startup item not found: {args.name}", file=sys.stderr)
+            return 1
+        
+        if item.enabled:
+            print(f"Item '{item.name}' is already enabled")
+            return 0
+        
+        # Enable the item
+        success = manager.enable_startup_item(item)
+        
+        if success:
+            print(f"✓ Enabled: {item.name}")
+            return 0
+        else:
+            print(f"✗ Failed to enable: {item.name}", file=sys.stderr)
+            print("Note: Some items may require manual restoration")
+            return 1
+            
+    except Exception as exc:
+        print(f"Failed to enable startup item: {exc}", file=sys.stderr)
+        return 1
+
+
+def startup_remove(args: argparse.Namespace) -> int:
+    """Permanently remove a startup item."""
+    if not STARTUP_AVAILABLE:
+        print("Startup management not available", file=sys.stderr)
+        return 1
+    
+    try:
+        manager = StartupManager()
+        items = manager.list_startup_items()
+        
+        # Find the item by name
+        item = next((i for i in items if i.name == args.name), None)
+        
+        if not item:
+            print(f"Startup item not found: {args.name}", file=sys.stderr)
+            return 1
+        
+        # Confirm if not forced
+        if not args.force:
+            print(f"WARNING: This will permanently remove '{item.name}'")
+            print("Use 'disable' instead if you want to restore it later.")
+            response = input(f"Permanently remove '{item.name}'? [y/N]: ")
+            if response.lower() not in ['y', 'yes']:
+                print("Cancelled")
+                return 0
+        
+        # Remove the item
+        success = manager.remove_startup_item(item)
+        
+        if success:
+            print(f"✓ Permanently removed: {item.name}")
+            return 0
+        else:
+            print(f"✗ Failed to remove: {item.name}", file=sys.stderr)
+            return 1
+            
+    except Exception as exc:
+        print(f"Failed to remove startup item: {exc}", file=sys.stderr)
+        return 1
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Better11 application manager")
     parser.add_argument(
@@ -173,6 +297,20 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         
         # Info command
         startup_subparsers.add_parser("info", help="Show startup information and recommendations")
+        
+        # Disable command
+        disable_parser = startup_subparsers.add_parser("disable", help="Disable a startup item")
+        disable_parser.add_argument("name", help="Name of the startup item to disable")
+        disable_parser.add_argument("--force", action="store_true", help="Skip confirmation")
+        
+        # Enable command
+        enable_parser = startup_subparsers.add_parser("enable", help="Enable a startup item")
+        enable_parser.add_argument("name", help="Name of the startup item to enable")
+        
+        # Remove command
+        remove_parser = startup_subparsers.add_parser("remove", help="Permanently remove a startup item")
+        remove_parser.add_argument("name", help="Name of the startup item to remove")
+        remove_parser.add_argument("--force", action="store_true", help="Skip confirmation")
 
     return parser.parse_args(argv)
 
@@ -186,6 +324,12 @@ def main(argv: list[str] | None = None) -> int:
             return list_startup(args)
         if args.startup_command == "info":
             return startup_info(args)
+        if args.startup_command == "disable":
+            return startup_disable(args)
+        if args.startup_command == "enable":
+            return startup_enable(args)
+        if args.startup_command == "remove":
+            return startup_remove(args)
         return 1
     
     # Handle app management commands

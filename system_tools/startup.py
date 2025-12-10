@@ -285,21 +285,98 @@ class StartupManager(SystemTool):
         ------
         SafetyError
             If operation fails
+        
+        Examples
+        --------
+        >>> manager = StartupManager()
+        >>> items = manager.list_startup_items()
+        >>> disabled_item = next((i for i in items if not i.enabled), None)
+        >>> if disabled_item:
+        ...     manager.enable_startup_item(disabled_item)
         """
         if self.dry_run:
             _LOGGER.info("DRY RUN: Would enable %s", item.name)
             return True
         
+        if item.enabled:
+            _LOGGER.warning("Item %s is already enabled", item.name)
+            return True
+        
         _LOGGER.info("Enabling startup item: %s", item.name)
         
-        # TODO: Implement enable logic based on location
-        # For registry: restore the value
-        # For folder: restore the file
+        try:
+            if item.location in [StartupLocation.REGISTRY_HKLM_RUN, 
+                                StartupLocation.REGISTRY_HKCU_RUN,
+                                StartupLocation.REGISTRY_HKLM_RUN_ONCE,
+                                StartupLocation.REGISTRY_HKCU_RUN_ONCE]:
+                return self._enable_registry_item(item)
+            
+            elif item.location in [StartupLocation.STARTUP_FOLDER_USER,
+                                  StartupLocation.STARTUP_FOLDER_COMMON]:
+                return self._enable_folder_item(item)
+            
+            else:
+                raise NotImplementedError(
+                    f"Enable not yet implemented for {item.location.value}")
         
-        raise NotImplementedError("Enable functionality not yet implemented")
+        except Exception as exc:
+            _LOGGER.error("Failed to enable %s: %s", item.name, exc)
+            raise SafetyError(f"Failed to enable startup item: {exc}") from exc
+    
+    def _enable_registry_item(self, item: StartupItem) -> bool:
+        """Enable a registry startup item."""
+        if not WINREG_AVAILABLE:
+            raise SafetyError("Registry operations require Windows")
+        
+        # Parse the location to get hive and key
+        location_map = {
+            StartupLocation.REGISTRY_HKLM_RUN: (
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+            ),
+            StartupLocation.REGISTRY_HKCU_RUN: (
+                winreg.HKEY_CURRENT_USER,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+            ),
+            StartupLocation.REGISTRY_HKLM_RUN_ONCE: (
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+            ),
+            StartupLocation.REGISTRY_HKCU_RUN_ONCE: (
+                winreg.HKEY_CURRENT_USER,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+            ),
+        }
+        
+        hive, subkey = location_map[item.location]
+        
+        try:
+            # Try to restore from backup first (not implemented yet)
+            # For now, assume item was disabled by being removed
+            # User would need to manually add it back
+            _LOGGER.warning(
+                "Registry item restoration not fully implemented. "
+                "Item must be manually added back to registry."
+            )
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to enable registry item: %s", exc)
+            raise
+    
+    def _enable_folder_item(self, item: StartupItem) -> bool:
+        """Enable a startup folder item."""
+        # If disabled, the file might have been renamed or moved
+        # For now, log that manual intervention is needed
+        _LOGGER.warning(
+            "Folder item restoration not fully implemented. "
+            "File may need to be manually restored."
+        )
+        return False
     
     def disable_startup_item(self, item: StartupItem) -> bool:
         """Disable a startup item without removing it.
+        
+        This will remove the startup entry but keep a backup for restoration.
         
         Parameters
         ----------
@@ -315,21 +392,120 @@ class StartupManager(SystemTool):
         ------
         SafetyError
             If operation fails
+        
+        Examples
+        --------
+        >>> manager = StartupManager()
+        >>> items = manager.list_startup_items()
+        >>> item = items[0]
+        >>> manager.disable_startup_item(item)
         """
         if self.dry_run:
             _LOGGER.info("DRY RUN: Would disable %s", item.name)
             return True
         
+        if not item.enabled:
+            _LOGGER.warning("Item %s is already disabled", item.name)
+            return True
+        
         _LOGGER.info("Disabling startup item: %s", item.name)
         
-        # TODO: Implement disable logic based on location
-        # For registry: rename value or delete it
-        # For folder: rename file or move it
+        try:
+            if item.location in [StartupLocation.REGISTRY_HKLM_RUN, 
+                                StartupLocation.REGISTRY_HKCU_RUN,
+                                StartupLocation.REGISTRY_HKLM_RUN_ONCE,
+                                StartupLocation.REGISTRY_HKCU_RUN_ONCE]:
+                return self._disable_registry_item(item)
+            
+            elif item.location in [StartupLocation.STARTUP_FOLDER_USER,
+                                  StartupLocation.STARTUP_FOLDER_COMMON]:
+                return self._disable_folder_item(item)
+            
+            else:
+                raise NotImplementedError(
+                    f"Disable not yet implemented for {item.location.value}")
         
-        raise NotImplementedError("Disable functionality not yet implemented")
+        except Exception as exc:
+            _LOGGER.error("Failed to disable %s: %s", item.name, exc)
+            raise SafetyError(f"Failed to disable startup item: {exc}") from exc
+    
+    def _disable_registry_item(self, item: StartupItem) -> bool:
+        """Disable a registry startup item by removing the value."""
+        if not WINREG_AVAILABLE:
+            raise SafetyError("Registry operations require Windows")
+        
+        # Parse the location to get hive and key
+        location_map = {
+            StartupLocation.REGISTRY_HKLM_RUN: (
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+            ),
+            StartupLocation.REGISTRY_HKCU_RUN: (
+                winreg.HKEY_CURRENT_USER,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+            ),
+            StartupLocation.REGISTRY_HKLM_RUN_ONCE: (
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+            ),
+            StartupLocation.REGISTRY_HKCU_RUN_ONCE: (
+                winreg.HKEY_CURRENT_USER,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+            ),
+        }
+        
+        hive, subkey = location_map[item.location]
+        
+        try:
+            # Backup the value first (to a backup key)
+            backup_key_path = subkey.replace("\\CurrentVersion\\", "\\CurrentVersion\\Better11Backup\\")
+            
+            # Create backup
+            try:
+                with winreg.CreateKeyEx(hive, backup_key_path) as backup_key:
+                    winreg.SetValueEx(backup_key, item.name, 0, winreg.REG_SZ, item.command)
+                    _LOGGER.info("Backed up %s to %s", item.name, backup_key_path)
+            except Exception as backup_exc:
+                _LOGGER.warning("Failed to create backup: %s", backup_exc)
+            
+            # Delete the value from the startup key
+            with winreg.OpenKey(hive, subkey, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.DeleteValue(key, item.name)
+                _LOGGER.info("Deleted registry value: %s", item.name)
+            
+            return True
+            
+        except FileNotFoundError:
+            _LOGGER.warning("Registry value not found: %s", item.name)
+            return True  # Already disabled
+        except Exception as exc:
+            _LOGGER.error("Failed to disable registry item: %s", exc)
+            raise
+    
+    def _disable_folder_item(self, item: StartupItem) -> bool:
+        """Disable a startup folder item by renaming it."""
+        file_path = Path(item.command)
+        
+        if not file_path.exists():
+            _LOGGER.warning("Startup file not found: %s", file_path)
+            return True  # Already disabled
+        
+        # Rename the file to disable it (add .disabled extension)
+        disabled_path = file_path.with_suffix(file_path.suffix + '.disabled')
+        
+        try:
+            file_path.rename(disabled_path)
+            _LOGGER.info("Renamed %s to %s", file_path, disabled_path)
+            return True
+        except Exception as exc:
+            _LOGGER.error("Failed to rename file: %s", exc)
+            raise
     
     def remove_startup_item(self, item: StartupItem) -> bool:
         """Permanently remove a startup item.
+        
+        This will delete the startup entry without creating a backup.
+        Use disable_startup_item() if you want to be able to restore it.
         
         Parameters
         ----------
@@ -345,6 +521,13 @@ class StartupManager(SystemTool):
         ------
         SafetyError
             If operation fails
+        
+        Examples
+        --------
+        >>> manager = StartupManager()
+        >>> items = manager.list_startup_items()
+        >>> item = items[0]
+        >>> manager.remove_startup_item(item)  # Permanently removes
         """
         if self.dry_run:
             _LOGGER.info("DRY RUN: Would remove %s", item.name)
@@ -352,9 +535,82 @@ class StartupManager(SystemTool):
         
         _LOGGER.info("Removing startup item: %s", item.name)
         
-        # TODO: Implement remove logic based on location
+        try:
+            if item.location in [StartupLocation.REGISTRY_HKLM_RUN, 
+                                StartupLocation.REGISTRY_HKCU_RUN,
+                                StartupLocation.REGISTRY_HKLM_RUN_ONCE,
+                                StartupLocation.REGISTRY_HKCU_RUN_ONCE]:
+                return self._remove_registry_item(item)
+            
+            elif item.location in [StartupLocation.STARTUP_FOLDER_USER,
+                                  StartupLocation.STARTUP_FOLDER_COMMON]:
+                return self._remove_folder_item(item)
+            
+            else:
+                raise NotImplementedError(
+                    f"Remove not yet implemented for {item.location.value}")
         
-        raise NotImplementedError("Remove functionality not yet implemented")
+        except Exception as exc:
+            _LOGGER.error("Failed to remove %s: %s", item.name, exc)
+            raise SafetyError(f"Failed to remove startup item: {exc}") from exc
+    
+    def _remove_registry_item(self, item: StartupItem) -> bool:
+        """Permanently remove a registry startup item."""
+        if not WINREG_AVAILABLE:
+            raise SafetyError("Registry operations require Windows")
+        
+        # Parse the location to get hive and key
+        location_map = {
+            StartupLocation.REGISTRY_HKLM_RUN: (
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+            ),
+            StartupLocation.REGISTRY_HKCU_RUN: (
+                winreg.HKEY_CURRENT_USER,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+            ),
+            StartupLocation.REGISTRY_HKLM_RUN_ONCE: (
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+            ),
+            StartupLocation.REGISTRY_HKCU_RUN_ONCE: (
+                winreg.HKEY_CURRENT_USER,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+            ),
+        }
+        
+        hive, subkey = location_map[item.location]
+        
+        try:
+            # Delete the value from the startup key
+            with winreg.OpenKey(hive, subkey, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.DeleteValue(key, item.name)
+                _LOGGER.info("Permanently deleted registry value: %s", item.name)
+            
+            return True
+            
+        except FileNotFoundError:
+            _LOGGER.warning("Registry value not found: %s", item.name)
+            return True  # Already removed
+        except Exception as exc:
+            _LOGGER.error("Failed to remove registry item: %s", exc)
+            raise
+    
+    def _remove_folder_item(self, item: StartupItem) -> bool:
+        """Permanently remove a startup folder item."""
+        file_path = Path(item.command)
+        
+        if not file_path.exists():
+            _LOGGER.warning("Startup file not found: %s", file_path)
+            return True  # Already removed
+        
+        try:
+            file_path.unlink()
+            _LOGGER.info("Permanently deleted file: %s", file_path)
+            return True
+        except Exception as exc:
+            _LOGGER.error("Failed to delete file: %s", exc)
+            raise
     
     def get_boot_time_estimate(self) -> float:
         """Estimate total boot time impact from startup items.
