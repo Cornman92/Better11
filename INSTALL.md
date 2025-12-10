@@ -246,6 +246,13 @@ python
 >>> exit()
 ```
 
+> **Note:** For CI or local development on non-Windows hosts, Better11's
+> system tools can bypass the platform guard by setting the environment
+> variable ``BETTER11_ALLOW_NON_WINDOWS=1`` or by passing
+> ``allow_non_windows=True`` in tool configuration. Production deployments
+> should keep the default enforcement to avoid running Windows-specific
+> commands on unsupported platforms.
+
 ### Verify Administrator Access
 
 Many features require administrator privileges. To run as administrator:

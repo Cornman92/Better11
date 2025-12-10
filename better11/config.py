@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Mapping
 
 try:
     import tomllib  # Python 3.11+
@@ -271,18 +271,21 @@ class Config:
         return Path.home() / ".better11" / "config.toml"
     
     @staticmethod
-    def get_system_path() -> Path:
+    def get_system_path(os_name: Optional[str] = None, env: Optional[Mapping[str, str]] = None) -> Path:
         """Get system-wide configuration file path.
-        
+
         Returns
         -------
         Path
             System configuration file path (C:\\ProgramData\\Better11\\config.toml on Windows)
         """
-        if os.name == 'nt':
-            return Path(os.environ.get('PROGRAMDATA', 'C:\\ProgramData')) / "Better11" / "config.toml"
-        else:
-            return Path("/etc/better11/config.toml")
+        platform_name = (os_name or os.name).lower()
+        env_mapping = env or os.environ
+
+        if platform_name == 'nt':
+            return Path(env_mapping.get('PROGRAMDATA', 'C:\\ProgramData')) / "Better11" / "config.toml"
+
+        return Path("/etc/better11/config.toml")
     
     def validate(self) -> bool:
         """Validate configuration values.

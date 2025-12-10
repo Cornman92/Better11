@@ -6,6 +6,7 @@ should inherit from for consistency, safety, and testability.
 from __future__ import annotations
 
 import logging
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
@@ -141,8 +142,13 @@ class SystemTool(ABC):
         SafetyError
             If critical safety checks fail
         """
-        # Ensure Windows platform
-        ensure_windows()
+        # Ensure Windows platform (configurable for tests/non-Windows environments)
+        windows_ok = ensure_windows(allow_non_windows=self._allow_non_windows())
+        if not windows_ok:
+            self._logger.warning(
+                "Running %s without Windows enforcement; platform-specific operations may fail",
+                self._metadata.name,
+            )
         
         # Validate tool-specific environment
         self.validate_environment()
@@ -259,6 +265,23 @@ class SystemTool(ABC):
             return ctypes.windll.shell32.IsUserAnAdmin() != 0
         except Exception:
             return False
+
+    def _allow_non_windows(self) -> bool:
+        """Determine whether Windows enforcement can be bypassed.
+
+        Priority order:
+        1. Environment variable ``BETTER11_ALLOW_NON_WINDOWS`` (truthy values
+           enable bypass: ``1``, ``true``, ``yes``, ``on``)
+        2. ``allow_non_windows`` flag in the tool configuration
+        3. Default to ``True`` to support local development and CI environments
+           where Windows APIs are unavailable.
+        """
+
+        env_override = os.getenv("BETTER11_ALLOW_NON_WINDOWS")
+        if env_override is not None:
+            return env_override.strip().lower() in {"1", "true", "yes", "on"}
+
+        return bool(self.config.get("allow_non_windows", True))
 
 
 class RegistryTool(SystemTool):

@@ -854,13 +854,18 @@ Raised when safety precondition fails.
 #### Function: `ensure_windows`
 
 ```python
-ensure_windows() -> None
+ensure_windows(allow_non_windows: bool = False) -> bool
 ```
 
-Ensure current platform is Windows.
+Ensure current platform is Windows. When ``allow_non_windows`` is True, the
+function logs a warning and returns ``False`` instead of raising an error so
+callers can explicitly permit cross-platform dry runs or CI environments.
+
+**Returns:** ``True`` when Windows is detected, ``False`` when bypassing the
+platform check.
 
 **Raises:**
-- `SafetyError`: If not running on Windows
+- `SafetyError`: If not running on Windows and ``allow_non_windows`` is False
 
 #### Function: `confirm_action`
 

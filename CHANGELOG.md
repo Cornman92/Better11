@@ -31,6 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - IMPLEMENTATION_PLAN_V0.3.0.md: Detailed 12-week implementation plan
 - Updated API documentation for new modules
 
+#### Changed
+- **Platform Safety Controls**: `ensure_windows` now supports an
+  `allow_non_windows` flag with logging so CI and dry-run scenarios can proceed
+  without raising errors while keeping production enforcement available via
+  configuration or environment variables.
+- **Configuration Paths**: `Config.get_system_path` accepts explicit platform
+  and environment overrides to remove the need for global platform monkeypatching
+  during tests.
+
 ### Planned for Future Releases
 - Plugin system for extensibility (v0.5.0)
 - Web-based GUI alternative (v0.4.0)
