@@ -141,8 +141,9 @@ class SystemTool(ABC):
         SafetyError
             If critical safety checks fail
         """
-        # Ensure Windows platform
-        ensure_windows()
+        # Ensure Windows platform when required
+        if self._platform_check_required():
+            ensure_windows()
         
         # Validate tool-specific environment
         self.validate_environment()
@@ -233,10 +234,20 @@ class SystemTool(ABC):
     def _should_create_restore_point(self) -> bool:
         """Check if restore point should be created."""
         return self.config.get('always_create_restore_point', True)
-    
+
     def _should_confirm(self) -> bool:
         """Check if user confirmation is required."""
         return self.config.get('confirm_destructive_actions', True)
+
+    def _platform_check_required(self) -> bool:
+        """Determine whether to enforce Windows platform checks.
+
+        By default, platform checks are skipped to allow dry-run and testing on
+        non-Windows hosts. Consumers can opt into strict enforcement by setting
+        ``require_windows=True`` in the tool configuration.
+        """
+
+        return self.config.get('require_windows', False)
     
     def _get_confirmation_message(self) -> str:
         """Get confirmation message for user prompt."""
