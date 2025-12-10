@@ -112,9 +112,99 @@ class TestConfig:
             assert isinstance(config, Config)
 
 
-# TODO: Add tests for:
-# - YAML configuration support
-# - Environment variable overrides
-# - System-wide configuration
-# - Configuration migration
-# - Invalid TOML/YAML handling
+    def test_save_and_load_yaml(self):
+        """Test saving and loading YAML configuration."""
+        try:
+            import yaml as _yaml  # Check if yaml is available
+        except ImportError:
+            pytest.skip("PyYAML not installed")
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "config.yaml"
+            
+            # Create and save config
+            original = Config(
+                better11=Better11Config(auto_update=False, telemetry_enabled=True),
+                applications=ApplicationsConfig(verify_signatures=False)
+            )
+            original.save(path)
+            
+            # Load config
+            loaded = Config.load(path)
+            assert loaded.better11.auto_update is False
+            assert loaded.better11.telemetry_enabled is True
+            assert loaded.applications.verify_signatures is False
+    
+    def test_env_variable_override_auto_update(self, monkeypatch):
+        """Test environment variable override for auto_update."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "config.toml"
+            
+            # Save config with auto_update=True
+            config = Config(better11=Better11Config(auto_update=True))
+            config.save(path)
+            
+            # Set env variable to override
+            monkeypatch.setenv('BETTER11_AUTO_UPDATE', 'false')
+            
+            # Load config - should be overridden
+            loaded = Config.load(path)
+            assert loaded.better11.auto_update is False
+    
+    def test_env_variable_override_log_level(self, monkeypatch):
+        """Test environment variable override for log level."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "config.toml"
+            
+            config = Config(logging=LoggingConfig(level="INFO"))
+            config.save(path)
+            
+            monkeypatch.setenv('BETTER11_LOG_LEVEL', 'DEBUG')
+            
+            loaded = Config.load(path)
+            assert loaded.logging.level == "DEBUG"
+    
+    def test_invalid_toml_file(self):
+        """Test handling of invalid TOML file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "invalid.toml"
+            
+            # Write invalid TOML
+            with open(path, 'w') as f:
+                f.write("this is not valid TOML {][")
+            
+            # Should raise ValueError
+            with pytest.raises(ValueError, match="Failed to load configuration"):
+                Config.load(path)
+    
+    def test_unsupported_file_format(self):
+        """Test unsupported configuration file format."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "config.json"
+            
+            with open(path, 'w') as f:
+                f.write('{}')
+            
+            with pytest.raises(ValueError, match="Unsupported configuration format"):
+                Config.load(path)
+    
+    def test_system_path_windows(self, monkeypatch):
+        """Test system configuration path on Windows."""
+        monkeypatch.setattr('os.name', 'nt')
+        monkeypatch.setenv('PROGRAMDATA', 'C:\\ProgramData')
+        
+        path = Config.get_system_path()
+        assert 'ProgramData' in str(path)
+        assert 'Better11' in str(path)
+    
+    def test_from_dict_with_partial_data(self):
+        """Test creating config from partial dictionary."""
+        data = {
+            'better11': {'auto_update': False},
+            'applications': {}
+        }
+        
+        config = Config._from_dict(data)
+        assert config.better11.auto_update is False
+        assert config.better11.version == "0.3.0"  # Default
+        assert config.applications.verify_signatures is True  # Default

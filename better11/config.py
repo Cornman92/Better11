@@ -17,9 +17,15 @@ from typing import Optional, Any, Dict
 try:
     import tomllib  # Python 3.11+
 except ImportError:
-    import tomli as tomllib  # type: ignore
+    try:
+        import tomli as tomllib  # type: ignore
+    except ImportError:
+        tomllib = None  # type: ignore
 
-import yaml
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: ignore
 
 
 @dataclass
@@ -157,8 +163,12 @@ class Config:
         try:
             with open(path, 'rb' if suffix == '.toml' else 'r') as f:
                 if suffix == '.toml':
+                    if tomllib is None:
+                        raise ImportError("TOML support requires Python 3.11+ or tomli package")
                     data = tomllib.load(f)
                 elif suffix in {'.yaml', '.yml'}:
+                    if yaml is None:
+                        raise ImportError("YAML support requires pyyaml package: pip install pyyaml")
                     data = yaml.safe_load(f)
                 else:
                     raise ValueError(f"Unsupported configuration format: {suffix}")
@@ -225,6 +235,8 @@ class Config:
             if suffix == '.toml' or suffix == '':
                 self._save_as_toml(f, data)
             elif suffix in {'.yaml', '.yml'}:
+                if yaml is None:
+                    raise ImportError("YAML support requires pyyaml package: pip install pyyaml")
                 yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
             else:
                 raise ValueError(f"Unsupported configuration format: {suffix}")
