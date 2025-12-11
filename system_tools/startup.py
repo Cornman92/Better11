@@ -174,7 +174,9 @@ class StartupManager(SystemTool):
         
         items.extend(self._get_startup_folder_items())
         
-        # TODO: Add scheduled tasks
+        # Get scheduled tasks
+        items.extend(self._get_scheduled_tasks())
+        
         # TODO: Add services
         
         _LOGGER.info("Listed %d startup items", len(items))
@@ -268,6 +270,81 @@ class StartupManager(SystemTool):
         _LOGGER.debug("Found %d startup folder items", len(items))
         return items
     
+    def _get_scheduled_tasks(self) -> List[StartupItem]:
+        """Get startup items from Task Scheduler.
+        
+        Returns
+        -------
+        List[StartupItem]
+            Startup tasks that run at logon or startup
+        """
+        items = []
+        
+        if os.name != 'nt':
+            _LOGGER.debug("Skipping scheduled tasks (not on Windows)")
+            return items
+        
+        try:
+            # Use schtasks.exe to query tasks
+            # /query: Query tasks
+            # /fo CSV: Output in CSV format
+            # /v: Verbose (includes status)
+            result = subprocess.run(
+                ['schtasks', '/query', '/fo', 'CSV', '/v'],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=10
+            )
+            
+            # Parse CSV output
+            lines = result.stdout.strip().split('\n')
+            if len(lines) < 2:
+                return items
+            
+            # Skip header line
+            for line in lines[1:]:
+                # Split CSV (basic parsing)
+                parts = line.split('","')
+                if len(parts) < 10:
+                    continue
+                
+                # Clean up quotes
+                parts = [p.strip('"') for p in parts]
+                
+                task_name = parts[0] if len(parts) > 0 else ""
+                status = parts[3] if len(parts) > 3 else ""
+                triggers = parts[9] if len(parts) > 9 else ""
+                
+                # Filter for startup/logon tasks
+                if not any(trigger in triggers.lower() for trigger in ['logon', 'startup', 'boot']):
+                    continue
+                
+                # Skip disabled tasks unless we want to show them
+                enabled = status.lower() == 'ready' or status.lower() == 'running'
+                
+                # Create startup item
+                item = StartupItem(
+                    name=task_name,
+                    command=f"Task: {task_name}",
+                    location=StartupLocation.TASK_SCHEDULER,
+                    enabled=enabled,
+                    impact=StartupImpact.MEDIUM,  # Tasks typically have medium impact
+                    publisher=None
+                )
+                
+                items.append(item)
+                
+        except subprocess.TimeoutExpired:
+            _LOGGER.warning("Timeout querying scheduled tasks")
+        except subprocess.CalledProcessError as exc:
+            _LOGGER.warning("Failed to query scheduled tasks: %s", exc)
+        except Exception as exc:
+            _LOGGER.warning("Error parsing scheduled tasks: %s", exc)
+        
+        _LOGGER.info("Found %d scheduled startup tasks", len(items))
+        return items
+    
     def enable_startup_item(self, item: StartupItem) -> bool:
         """Enable a disabled startup item.
         
@@ -314,6 +391,9 @@ class StartupManager(SystemTool):
             elif item.location in [StartupLocation.STARTUP_FOLDER_USER,
                                   StartupLocation.STARTUP_FOLDER_COMMON]:
                 return self._enable_folder_item(item)
+            
+            elif item.location == StartupLocation.TASK_SCHEDULER:
+                return self._enable_scheduled_task(item)
             
             else:
                 raise NotImplementedError(
@@ -421,6 +501,9 @@ class StartupManager(SystemTool):
                                   StartupLocation.STARTUP_FOLDER_COMMON]:
                 return self._disable_folder_item(item)
             
+            elif item.location == StartupLocation.TASK_SCHEDULER:
+                return self._disable_scheduled_task(item)
+            
             else:
                 raise NotImplementedError(
                     f"Disable not yet implemented for {item.location.value}")
@@ -500,6 +583,32 @@ class StartupManager(SystemTool):
         except Exception as exc:
             _LOGGER.error("Failed to rename file: %s", exc)
             raise
+    
+    def _disable_scheduled_task(self, item: StartupItem) -> bool:
+        """Disable a scheduled task."""
+        if os.name != 'nt':
+            raise SafetyError("Scheduled tasks require Windows")
+        
+        try:
+            task_name = item.name
+            
+            subprocess.run(
+                ['schtasks', '/change', '/tn', task_name, '/disable'],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5
+            )
+            
+            _LOGGER.info("Disabled scheduled task: %s", task_name)
+            return True
+            
+        except subprocess.CalledProcessError as exc:
+            _LOGGER.error("Failed to disable task: %s", exc)
+            raise SafetyError(f"Failed to disable scheduled task: {exc}") from exc
+        except subprocess.TimeoutExpired:
+            _LOGGER.error("Timeout disabling task")
+            raise SafetyError("Timeout disabling scheduled task")
     
     def remove_startup_item(self, item: StartupItem) -> bool:
         """Permanently remove a startup item.
