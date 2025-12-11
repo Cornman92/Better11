@@ -306,7 +306,7 @@ class StartupManager(SystemTool):
         """
         _LOGGER.info("Enabling startup item: %s", item.name)
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would enable startup item: %s", item.name)
             return True
 
@@ -376,7 +376,7 @@ class StartupManager(SystemTool):
         """
         _LOGGER.info("Disabling startup item: %s", item.name)
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would disable startup item: %s", item.name)
             return True
 
@@ -450,7 +450,7 @@ class StartupManager(SystemTool):
         """
         _LOGGER.info("Removing startup item: %s", item.name)
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would remove startup item: %s", item.name)
             return True
 

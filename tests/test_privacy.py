@@ -72,7 +72,7 @@ class TestPrivacyManager:
     def test_manager_dry_run(self):
         """Test manager with dry-run mode."""
         manager = PrivacyManager(dry_run=True)
-        assert manager._dry_run is True
+        assert manager.dry_run is True
 
     def test_maximum_privacy_preset(self):
         """Test MAXIMUM_PRIVACY preset."""
