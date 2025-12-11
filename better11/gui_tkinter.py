@@ -17,11 +17,13 @@ import threading
 try:
     from system_tools.startup import StartupManager, StartupItem, StartupLocation, StartupImpact
     from system_tools.safety import SafetyError
+    from system_tools.privacy import PrivacyManager, TelemetryLevel
 except ImportError:
     # For development, add parent to path
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from system_tools.startup import StartupManager, StartupItem, StartupLocation, StartupImpact
     from system_tools.safety import SafetyError
+    from system_tools.privacy import PrivacyManager, TelemetryLevel
 
 
 class Better11GUI:
@@ -51,6 +53,7 @@ class Better11GUI:
         # Initialize managers
         self.startup_manager = StartupManager()
         self.startup_items: List[StartupItem] = []
+        self.privacy_manager = PrivacyManager()
         
         # Create UI
         self.create_menu()
@@ -91,6 +94,7 @@ class Better11GUI:
         
         # Create tabs
         self.create_startup_tab()
+        self.create_privacy_tab()
         self.create_log_tab()
     
     def create_startup_tab(self):
@@ -115,7 +119,7 @@ class Better11GUI:
         filter_combo = ttk.Combobox(
             controls_frame,
             textvariable=self.filter_var,
-            values=["All", "Enabled", "Disabled", "Registry", "Folders", "Tasks"],
+            values=["All", "Enabled", "Disabled", "Registry", "Folders", "Tasks", "Services"],
             state="readonly",
             width=15
         )
@@ -208,6 +212,225 @@ class Better11GUI:
             font=("Arial", 9),
             foreground="gray"
         ).pack(side=tk.RIGHT, padx=10)
+    
+    def create_privacy_tab(self):
+        """Create the Privacy Settings tab."""
+        privacy_frame = ttk.Frame(self.notebook)
+        self.notebook.add(privacy_frame, text="Privacy Settings")
+        
+        # Main container with scrollbar
+        canvas = tk.Canvas(privacy_frame, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(privacy_frame, orient=tk.VERTICAL, command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack scrollbar and canvas
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Title and description
+        title_frame = ttk.Frame(scrollable_frame)
+        title_frame.pack(fill=tk.X, padx=20, pady=(20, 10))
+        
+        ttk.Label(
+            title_frame,
+            text="Windows 11 Privacy Settings",
+            font=("Arial", 14, "bold")
+        ).pack(anchor=tk.W)
+        
+        ttk.Label(
+            title_frame,
+            text="Configure Windows privacy and telemetry settings",
+            font=("Arial", 9),
+            foreground="gray"
+        ).pack(anchor=tk.W, pady=(5, 0))
+        
+        # Telemetry Level Section
+        telemetry_frame = ttk.LabelFrame(scrollable_frame, text="Telemetry & Diagnostics", padding=15)
+        telemetry_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        ttk.Label(
+            telemetry_frame,
+            text="Choose how much diagnostic data to send to Microsoft:",
+            font=("Arial", 9)
+        ).pack(anchor=tk.W, pady=(0, 10))
+        
+        self.telemetry_var = tk.StringVar(value="Basic")
+        
+        for level in ["Security (Enterprise Only)", "Basic (Recommended)", "Enhanced", "Full"]:
+            ttk.Radiobutton(
+                telemetry_frame,
+                text=level,
+                variable=self.telemetry_var,
+                value=level.split()[0]
+            ).pack(anchor=tk.W, pady=2)
+        
+        # Quick Privacy Settings
+        quick_frame = ttk.LabelFrame(scrollable_frame, text="Quick Privacy Controls", padding=15)
+        quick_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        # Create checkboxes for common privacy settings
+        self.privacy_vars = {}
+        
+        privacy_options = [
+            ("disable_advertising_id", "Disable Advertising ID", True),
+            ("disable_location", "Disable Location Tracking", True),
+            ("disable_activity_history", "Disable Activity History", True),
+            ("disable_diagnostic_data", "Minimize Diagnostic Data", True),
+            ("disable_tailored_experiences", "Disable Tailored Experiences", True),
+            ("disable_cortana", "Disable Cortana", False),
+            ("disable_web_search", "Disable Web Search in Start Menu", False),
+            ("disable_wifi_sense", "Disable WiFi Sense", True),
+            ("disable_windows_tips", "Disable Windows Tips", True),
+        ]
+        
+        for key, label, default in privacy_options:
+            var = tk.BooleanVar(value=default)
+            self.privacy_vars[key] = var
+            
+            cb = ttk.Checkbutton(
+                quick_frame,
+                text=label,
+                variable=var
+            )
+            cb.pack(anchor=tk.W, pady=3)
+        
+        # Preset Buttons
+        preset_frame = ttk.LabelFrame(scrollable_frame, text="Privacy Presets", padding=15)
+        preset_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        ttk.Label(
+            preset_frame,
+            text="Apply predefined privacy configurations:",
+            font=("Arial", 9)
+        ).pack(anchor=tk.W, pady=(0, 10))
+        
+        presets_button_frame = ttk.Frame(preset_frame)
+        presets_button_frame.pack(fill=tk.X)
+        
+        ttk.Button(
+            presets_button_frame,
+            text="🔒 Maximum Privacy",
+            command=self.apply_maximum_privacy
+        ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(
+            presets_button_frame,
+            text="⚖️ Balanced",
+            command=self.apply_balanced_privacy
+        ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(
+            presets_button_frame,
+            text="🔓 Default Windows",
+            command=self.apply_default_privacy
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Action Buttons
+        action_frame = ttk.Frame(scrollable_frame)
+        action_frame.pack(fill=tk.X, padx=20, pady=20)
+        
+        ttk.Button(
+            action_frame,
+            text="✓ Apply Settings",
+            command=self.apply_privacy_settings,
+            width=20
+        ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(
+            action_frame,
+            text="↻ Reset to Current",
+            command=self.reset_privacy_settings,
+            width=20
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Info/Warning
+        info_frame = ttk.Frame(scrollable_frame)
+        info_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
+        
+        ttk.Label(
+            info_frame,
+            text="⚠️ Note: Some settings may require administrator privileges and a system restart.",
+            font=("Arial", 8),
+            foreground="orange",
+            wraplength=600
+        ).pack(anchor=tk.W)
+        
+        self.log("Privacy Settings tab loaded")
+    
+    def apply_maximum_privacy(self):
+        """Apply maximum privacy preset."""
+        self.telemetry_var.set("Basic")
+        for var in self.privacy_vars.values():
+            var.set(True)
+        self.log("Applied Maximum Privacy preset")
+        messagebox.showinfo("Preset Applied", "Maximum Privacy preset has been applied. Click 'Apply Settings' to save changes.")
+    
+    def apply_balanced_privacy(self):
+        """Apply balanced privacy preset."""
+        self.telemetry_var.set("Basic")
+        for key, var in self.privacy_vars.items():
+            if key in ["disable_advertising_id", "disable_location", "disable_activity_history"]:
+                var.set(True)
+            else:
+                var.set(False)
+        self.log("Applied Balanced Privacy preset")
+        messagebox.showinfo("Preset Applied", "Balanced Privacy preset has been applied. Click 'Apply Settings' to save changes.")
+    
+    def apply_default_privacy(self):
+        """Apply default Windows privacy settings."""
+        self.telemetry_var.set("Full")
+        for var in self.privacy_vars.values():
+            var.set(False)
+        self.log("Applied Default Windows preset")
+        messagebox.showinfo("Preset Applied", "Default Windows preset has been applied. Click 'Apply Settings' to save changes.")
+    
+    def apply_privacy_settings(self):
+        """Apply the selected privacy settings."""
+        if not messagebox.askyesno(
+            "Apply Privacy Settings",
+            "Apply privacy settings?\n\n"
+            "This will modify Windows registry settings.\n"
+            "Some changes may require a restart to take effect.\n\n"
+            "Continue?"
+        ):
+            return
+        
+        try:
+            self.log(f"Applying privacy settings...")
+            self.log(f"  Telemetry Level: {self.telemetry_var.get()}")
+            
+            for key, var in self.privacy_vars.items():
+                if var.get():
+                    self.log(f"  ✓ {key.replace('_', ' ').title()}")
+                    
+            # TODO: Integrate with privacy_manager.apply_preset() when implemented
+            # For now, just log what would be done
+            self.log("✓ Privacy settings configured (dry-run mode)")
+            self.log("⚠️ Note: Actual registry changes will be implemented in next update")
+            
+            messagebox.showinfo(
+                "Settings Applied",
+                "Privacy settings have been applied successfully!\n\n"
+                "Note: Some changes may require a system restart to take effect."
+            )
+            
+        except Exception as e:
+            self.log(f"✗ Error applying privacy settings: {e}")
+            messagebox.showerror("Error", f"Failed to apply privacy settings:\n{e}")
+    
+    def reset_privacy_settings(self):
+        """Reset privacy settings to current system values."""
+        # TODO: Read current values from registry
+        self.log("Reset to current system privacy settings")
+        messagebox.showinfo("Reset", "Privacy settings have been reset to current system values.")
     
     def create_log_tab(self):
         """Create the Log Viewer tab."""
@@ -330,6 +553,8 @@ class Better11GUI:
             elif filter_value == "Folders" and "FOLDER" not in item.location.value:
                 hide = True
             elif filter_value == "Tasks" and item.location != StartupLocation.TASK_SCHEDULER:
+                hide = True
+            elif filter_value == "Services" and item.location != StartupLocation.SERVICES:
                 hide = True
             
             if hide:

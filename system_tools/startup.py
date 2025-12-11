@@ -177,7 +177,8 @@ class StartupManager(SystemTool):
         # Get scheduled tasks
         items.extend(self._get_scheduled_tasks())
         
-        # TODO: Add services
+        # Get services
+        items.extend(self._get_startup_services())
         
         _LOGGER.info("Listed %d startup items", len(items))
         return items
@@ -395,6 +396,9 @@ class StartupManager(SystemTool):
             elif item.location == StartupLocation.TASK_SCHEDULER:
                 return self._enable_scheduled_task(item)
             
+            elif item.location == StartupLocation.SERVICES:
+                return self._enable_service(item)
+            
             else:
                 raise NotImplementedError(
                     f"Enable not yet implemented for {item.location.value}")
@@ -529,6 +533,9 @@ class StartupManager(SystemTool):
             
             elif item.location == StartupLocation.TASK_SCHEDULER:
                 return self._disable_scheduled_task(item)
+            
+            elif item.location == StartupLocation.SERVICES:
+                return self._disable_service(item)
             
             else:
                 raise NotImplementedError(
@@ -684,6 +691,12 @@ class StartupManager(SystemTool):
             elif item.location == StartupLocation.TASK_SCHEDULER:
                 return self._remove_scheduled_task(item)
             
+            elif item.location == StartupLocation.SERVICES:
+                raise SafetyError(
+                    "Services cannot be removed, only disabled. "
+                    "Use disable_startup_item() instead."
+                )
+            
             else:
                 raise NotImplementedError(
                     f"Remove not yet implemented for {item.location.value}")
@@ -775,6 +788,132 @@ class StartupManager(SystemTool):
         except subprocess.TimeoutExpired:
             _LOGGER.error("Timeout deleting task")
             raise SafetyError("Timeout deleting scheduled task")
+    
+    def _get_startup_services(self) -> List[StartupItem]:
+        """Get Windows services set to start automatically."""
+        items = []
+        
+        if os.name != 'nt':
+            _LOGGER.debug("Skipping services (not on Windows)")
+            return items
+        
+        try:
+            # Use PowerShell to get services
+            # Get-Service returns more detailed information than sc.exe
+            ps_command = (
+                "Get-Service | Where-Object { "
+                "$_.StartType -eq 'Automatic' -or $_.StartType -eq 'AutomaticDelayedStart' "
+                "} | Select-Object Name,DisplayName,Status,StartType | ConvertTo-Json"
+            )
+            
+            result = subprocess.run(
+                ['powershell', '-NoProfile', '-Command', ps_command],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=15
+            )
+            
+            import json
+            services_data = json.loads(result.stdout)
+            
+            # Handle single service (not an array)
+            if isinstance(services_data, dict):
+                services_data = [services_data]
+            
+            for service in services_data:
+                name = service.get('DisplayName', service.get('Name', 'Unknown'))
+                service_name = service.get('Name', '')
+                status = service.get('Status', 'Unknown')
+                start_type = service.get('StartType', 'Unknown')
+                
+                # Service is "enabled" if status is Running
+                enabled = status in ['Running', 'StartPending']
+                
+                # Determine impact based on start type
+                impact = StartupImpact.MEDIUM
+                if start_type == 'AutomaticDelayedStart':
+                    impact = StartupImpact.LOW
+                
+                item = StartupItem(
+                    name=name,
+                    command=f"Service: {service_name}",
+                    location=StartupLocation.SERVICES,
+                    enabled=enabled,
+                    impact=impact,
+                    publisher=None
+                )
+                
+                items.append(item)
+            
+            _LOGGER.info("Found %d automatic startup services", len(items))
+            
+        except subprocess.TimeoutExpired:
+            _LOGGER.warning("Timeout querying services")
+        except subprocess.CalledProcessError as exc:
+            _LOGGER.warning("Failed to query services: %s", exc)
+        except json.JSONDecodeError as exc:
+            _LOGGER.warning("Failed to parse services JSON: %s", exc)
+        except Exception as exc:
+            _LOGGER.warning("Error getting services: %s", exc)
+        
+        return items
+    
+    def _disable_service(self, item: StartupItem) -> bool:
+        """Disable a Windows service (set to Manual start)."""
+        if os.name != 'nt':
+            raise SafetyError("Services require Windows")
+        
+        try:
+            # Extract service name from command
+            service_name = item.command.replace("Service: ", "")
+            
+            # Set service to Manual start type
+            subprocess.run(
+                ['sc', 'config', service_name, 'start=', 'demand'],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5
+            )
+            
+            _LOGGER.info("Disabled service: %s (set to Manual)", item.name)
+            return True
+            
+        except subprocess.CalledProcessError as exc:
+            _LOGGER.error("Failed to disable service: %s", exc)
+            raise SafetyError(f"Failed to disable service: {exc}") from exc
+        except subprocess.TimeoutExpired:
+            _LOGGER.error("Timeout disabling service")
+            raise SafetyError("Timeout disabling service")
+    
+    def _enable_service(self, item: StartupItem) -> bool:
+        """Enable a Windows service (set to Automatic start)."""
+        if os.name != 'nt':
+            raise SafetyError("Services require Windows")
+        
+        try:
+            # Extract service name from command
+            service_name = item.command.replace("Service: ", "")
+            
+            # Set service to Automatic start type
+            subprocess.run(
+                ['sc', 'config', service_name, 'start=', 'auto'],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5
+            )
+            
+            _LOGGER.info("Enabled service: %s (set to Automatic)", item.name)
+            return True
+            
+        except subprocess.CalledProcessError as exc:
+            _LOGGER.error("Failed to enable service: %s", exc)
+            raise SafetyError(f"Failed to enable service: {exc}") from exc
+        except subprocess.TimeoutExpired:
+            _LOGGER.error("Timeout enabling service")
+            raise SafetyError("Timeout enabling service")
     
     def get_boot_time_estimate(self) -> float:
         """Estimate total boot time impact from startup items.

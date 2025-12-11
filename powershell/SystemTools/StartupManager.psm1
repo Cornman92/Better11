@@ -117,7 +117,8 @@ class StartupManager : SystemTool {
         # Get scheduled tasks
         $items.AddRange($this.GetScheduledTasks())
         
-        # TODO: Add services
+        # Get services
+        $items.AddRange($this.GetStartupServices())
         
         $this.Log("Listed $($items.Count) startup items")
         return $items.ToArray()
@@ -249,6 +250,45 @@ class StartupManager : SystemTool {
         return $items.ToArray()
     }
     
+    # Get Windows services that start automatically
+    [StartupItem[]] GetStartupServices() {
+        $items = [System.Collections.Generic.List[StartupItem]]::new()
+        
+        try {
+            # Get services set to Automatic or AutomaticDelayedStart
+            $services = Get-Service | Where-Object {
+                $_.StartType -eq 'Automatic' -or $_.StartType -eq 'AutomaticDelayedStart'
+            }
+            
+            foreach ($service in $services) {
+                $enabled = $service.Status -eq 'Running' -or $service.Status -eq 'StartPending'
+                
+                # Determine impact based on start type
+                $impact = [StartupImpact]::MEDIUM
+                if ($service.StartType -eq 'AutomaticDelayedStart') {
+                    $impact = [StartupImpact]::LOW
+                }
+                
+                $item = [StartupItem]::new(
+                    $service.DisplayName,
+                    "Service: $($service.Name)",
+                    [StartupLocation]::SERVICES,
+                    $enabled
+                )
+                $item.Impact = $impact
+                
+                $items.Add($item)
+            }
+            
+            $this.Log("Found $($items.Count) automatic startup services")
+        }
+        catch {
+            $this.LogWarning("Failed to query services: $_")
+        }
+        
+        return $items.ToArray()
+    }
+    
     # Disable a startup item
     [bool] DisableStartupItem([StartupItem]$Item) {
         if ($this.DryRun) {
@@ -277,6 +317,9 @@ class StartupManager : SystemTool {
                 }
                 ([StartupLocation]::TASK_SCHEDULER) {
                     return $this.DisableScheduledTask($Item)
+                }
+                ([StartupLocation]::SERVICES) {
+                    return $this.DisableService($Item)
                 }
                 default {
                     throw "Disable not yet implemented for $($Item.Location)"
@@ -372,6 +415,24 @@ class StartupManager : SystemTool {
         }
     }
     
+    # Disable a Windows service (set to Manual)
+    [bool] DisableService([StartupItem]$Item) {
+        try {
+            # Extract service name from command
+            $serviceName = $Item.Command -replace '^Service: ', ''
+            
+            # Set service to Manual start type
+            Set-Service -Name $serviceName -StartupType Manual -ErrorAction Stop
+            
+            $this.Log("Disabled service: $($Item.Name) (set to Manual)")
+            return $true
+        }
+        catch {
+            $this.LogError("Failed to disable service: $_")
+            throw [SafetyError]::new("Failed to disable service: $_")
+        }
+    }
+    
     # Enable a startup item
     [bool] EnableStartupItem([StartupItem]$Item) {
         if ($this.DryRun) {
@@ -400,6 +461,9 @@ class StartupManager : SystemTool {
                 }
                 ([StartupLocation]::TASK_SCHEDULER) {
                     return $this.EnableScheduledTask($Item)
+                }
+                ([StartupLocation]::SERVICES) {
+                    return $this.EnableService($Item)
                 }
                 default {
                     throw "Enable not yet implemented for $($Item.Location)"
@@ -482,6 +546,24 @@ class StartupManager : SystemTool {
         }
     }
     
+    # Enable a Windows service (set to Automatic)
+    [bool] EnableService([StartupItem]$Item) {
+        try {
+            # Extract service name from command
+            $serviceName = $Item.Command -replace '^Service: ', ''
+            
+            # Set service to Automatic start type
+            Set-Service -Name $serviceName -StartupType Automatic -ErrorAction Stop
+            
+            $this.Log("Enabled service: $($Item.Name) (set to Automatic)")
+            return $true
+        }
+        catch {
+            $this.LogError("Failed to enable service: $_")
+            throw [SafetyError]::new("Failed to enable service: $_")
+        }
+    }
+    
     # Remove a startup item permanently
     [bool] RemoveStartupItem([StartupItem]$Item) {
         if ($this.DryRun) {
@@ -505,6 +587,11 @@ class StartupManager : SystemTool {
                 }
                 ([StartupLocation]::TASK_SCHEDULER) {
                     return $this.RemoveScheduledTask($Item)
+                }
+                ([StartupLocation]::SERVICES) {
+                    throw [SafetyError]::new(
+                        "Services cannot be removed, only disabled. Use Disable-StartupItem instead."
+                    )
                 }
                 default {
                     throw "Remove not yet implemented for $($Item.Location)"
