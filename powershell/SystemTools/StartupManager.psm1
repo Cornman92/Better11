@@ -114,7 +114,9 @@ class StartupManager : SystemTool {
         # Get startup folder items
         $items.AddRange($this.GetStartupFolderItems())
         
-        # TODO: Add scheduled tasks
+        # Get scheduled tasks
+        $items.AddRange($this.GetScheduledTasks())
+        
         # TODO: Add services
         
         $this.Log("Listed $($items.Count) startup items")
@@ -209,6 +211,44 @@ class StartupManager : SystemTool {
         return $items.ToArray()
     }
     
+    # Get scheduled tasks that run at startup/logon
+    [StartupItem[]] GetScheduledTasks() {
+        $items = [System.Collections.Generic.List[StartupItem]]::new()
+        
+        try {
+            # Query all scheduled tasks
+            $tasks = schtasks /query /fo CSV /v 2>$null | ConvertFrom-Csv
+            
+            foreach ($task in $tasks) {
+                # Filter for startup/logon tasks
+                $triggers = $task.'Logon Mode'
+                if ($null -ne $triggers) {
+                    $triggersLower = $triggers.ToLower()
+                    if ($triggersLower -match 'logon|startup|boot') {
+                        $enabled = $task.Status -eq 'Ready' -or $task.Status -eq 'Running'
+                        
+                        $item = [StartupItem]::new(
+                            $task.TaskName,
+                            "Task: $($task.TaskName)",
+                            [StartupLocation]::TASK_SCHEDULER,
+                            $enabled
+                        )
+                        $item.Impact = [StartupImpact]::MEDIUM
+                        
+                        $items.Add($item)
+                    }
+                }
+            }
+            
+            $this.Log("Found $($items.Count) scheduled startup tasks")
+        }
+        catch {
+            $this.LogWarning("Failed to query scheduled tasks: $_")
+        }
+        
+        return $items.ToArray()
+    }
+    
     # Disable a startup item
     [bool] DisableStartupItem([StartupItem]$Item) {
         if ($this.DryRun) {
@@ -234,6 +274,9 @@ class StartupManager : SystemTool {
                 { $_ -in @([StartupLocation]::STARTUP_FOLDER_USER,
                            [StartupLocation]::STARTUP_FOLDER_COMMON) } {
                     return $this.DisableFolderItem($Item)
+                }
+                ([StartupLocation]::TASK_SCHEDULER) {
+                    return $this.DisableScheduledTask($Item)
                 }
                 default {
                     throw "Disable not yet implemented for $($Item.Location)"
@@ -310,6 +353,25 @@ class StartupManager : SystemTool {
         }
     }
     
+    # Disable scheduled task
+    [bool] DisableScheduledTask([StartupItem]$Item) {
+        try {
+            $result = schtasks /change /tn $Item.Name /disable 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                $this.Log("Disabled scheduled task: $($Item.Name)")
+                return $true
+            }
+            else {
+                throw "schtasks returned error code $LASTEXITCODE : $result"
+            }
+        }
+        catch {
+            $this.LogError("Failed to disable task: $_")
+            throw [SafetyError]::new("Failed to disable scheduled task: $_")
+        }
+    }
+    
     # Enable a startup item
     [bool] EnableStartupItem([StartupItem]$Item) {
         if ($this.DryRun) {
@@ -335,6 +397,9 @@ class StartupManager : SystemTool {
                 { $_ -in @([StartupLocation]::STARTUP_FOLDER_USER,
                            [StartupLocation]::STARTUP_FOLDER_COMMON) } {
                     return $this.EnableFolderItem($Item)
+                }
+                ([StartupLocation]::TASK_SCHEDULER) {
+                    return $this.EnableScheduledTask($Item)
                 }
                 default {
                     throw "Enable not yet implemented for $($Item.Location)"
@@ -398,6 +463,25 @@ class StartupManager : SystemTool {
         }
     }
     
+    # Enable scheduled task
+    [bool] EnableScheduledTask([StartupItem]$Item) {
+        try {
+            $result = schtasks /change /tn $Item.Name /enable 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                $this.Log("Enabled scheduled task: $($Item.Name)")
+                return $true
+            }
+            else {
+                throw "schtasks returned error code $LASTEXITCODE : $result"
+            }
+        }
+        catch {
+            $this.LogError("Failed to enable task: $_")
+            throw [SafetyError]::new("Failed to enable scheduled task: $_")
+        }
+    }
+    
     # Remove a startup item permanently
     [bool] RemoveStartupItem([StartupItem]$Item) {
         if ($this.DryRun) {
@@ -418,6 +502,9 @@ class StartupManager : SystemTool {
                 { $_ -in @([StartupLocation]::STARTUP_FOLDER_USER,
                            [StartupLocation]::STARTUP_FOLDER_COMMON) } {
                     return $this.RemoveFolderItem($Item)
+                }
+                ([StartupLocation]::TASK_SCHEDULER) {
+                    return $this.RemoveScheduledTask($Item)
                 }
                 default {
                     throw "Remove not yet implemented for $($Item.Location)"
@@ -466,6 +553,25 @@ class StartupManager : SystemTool {
         catch {
             $this.LogError("Failed to delete file: $_")
             throw
+        }
+    }
+    
+    # Remove scheduled task
+    [bool] RemoveScheduledTask([StartupItem]$Item) {
+        try {
+            $result = schtasks /delete /tn $Item.Name /f 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                $this.Log("Permanently deleted scheduled task: $($Item.Name)")
+                return $true
+            }
+            else {
+                throw "schtasks returned error code $LASTEXITCODE : $result"
+            }
+        }
+        catch {
+            $this.LogError("Failed to delete task: $_")
+            throw [SafetyError]::new("Failed to delete scheduled task: $_")
         }
     }
     

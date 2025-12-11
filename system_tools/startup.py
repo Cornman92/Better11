@@ -453,6 +453,32 @@ class StartupManager(SystemTool):
         )
         return False
     
+    def _enable_scheduled_task(self, item: StartupItem) -> bool:
+        """Enable a scheduled task."""
+        if os.name != 'nt':
+            raise SafetyError("Scheduled tasks require Windows")
+        
+        try:
+            task_name = item.name
+            
+            subprocess.run(
+                ['schtasks', '/change', '/tn', task_name, '/enable'],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5
+            )
+            
+            _LOGGER.info("Enabled scheduled task: %s", task_name)
+            return True
+            
+        except subprocess.CalledProcessError as exc:
+            _LOGGER.error("Failed to enable task: %s", exc)
+            raise SafetyError(f"Failed to enable scheduled task: {exc}") from exc
+        except subprocess.TimeoutExpired:
+            _LOGGER.error("Timeout enabling task")
+            raise SafetyError("Timeout enabling scheduled task")
+    
     def disable_startup_item(self, item: StartupItem) -> bool:
         """Disable a startup item without removing it.
         
@@ -655,6 +681,9 @@ class StartupManager(SystemTool):
                                   StartupLocation.STARTUP_FOLDER_COMMON]:
                 return self._remove_folder_item(item)
             
+            elif item.location == StartupLocation.TASK_SCHEDULER:
+                return self._remove_scheduled_task(item)
+            
             else:
                 raise NotImplementedError(
                     f"Remove not yet implemented for {item.location.value}")
@@ -720,6 +749,32 @@ class StartupManager(SystemTool):
         except Exception as exc:
             _LOGGER.error("Failed to delete file: %s", exc)
             raise
+    
+    def _remove_scheduled_task(self, item: StartupItem) -> bool:
+        """Permanently remove a scheduled task."""
+        if os.name != 'nt':
+            raise SafetyError("Scheduled tasks require Windows")
+        
+        try:
+            task_name = item.name
+            
+            subprocess.run(
+                ['schtasks', '/delete', '/tn', task_name, '/f'],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5
+            )
+            
+            _LOGGER.info("Permanently deleted scheduled task: %s", task_name)
+            return True
+            
+        except subprocess.CalledProcessError as exc:
+            _LOGGER.error("Failed to delete task: %s", exc)
+            raise SafetyError(f"Failed to delete scheduled task: {exc}") from exc
+        except subprocess.TimeoutExpired:
+            _LOGGER.error("Timeout deleting task")
+            raise SafetyError("Timeout deleting scheduled task")
     
     def get_boot_time_estimate(self) -> float:
         """Estimate total boot time impact from startup items.
