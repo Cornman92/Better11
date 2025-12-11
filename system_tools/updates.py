@@ -5,6 +5,8 @@ checking for updates, pausing updates, and configuring update settings.
 """
 from __future__ import annotations
 
+import platform
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -12,6 +14,7 @@ from typing import List, Optional
 
 from . import get_logger
 from .base import SystemTool, ToolMetadata
+from .safety import SafetyError, ensure_windows
 
 _LOGGER = get_logger(__name__)
 
@@ -84,8 +87,27 @@ class WindowsUpdateManager(SystemTool):
     
     def validate_environment(self) -> None:
         """Validate Windows Update service is available."""
-        # TODO: Check Windows Update service status
-        pass
+        ensure_windows()
+
+        # Check if Windows Update service (wuauserv) is available
+        if platform.system() == "Windows":
+            try:
+                result = subprocess.run(
+                    ["sc", "query", "wuauserv"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode != 0:
+                    raise SafetyError(
+                        "Windows Update service (wuauserv) is not available. "
+                        "This service is required for managing Windows updates."
+                    )
+                _LOGGER.debug("Windows Update service is available")
+            except subprocess.TimeoutExpired:
+                raise SafetyError("Timeout while checking Windows Update service status")
+            except FileNotFoundError:
+                raise SafetyError("Unable to check Windows Update service - 'sc' command not found")
     
     def execute(self) -> bool:
         """Execute default update check operation."""

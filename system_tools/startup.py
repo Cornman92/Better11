@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import platform
+import subprocess
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -98,24 +99,28 @@ class StartupManager(SystemTool):
     
     def list_startup_items(self) -> List[StartupItem]:
         """List all startup programs from all locations.
-        
+
         Returns
         -------
         List[StartupItem]
             List of all startup items
         """
         _LOGGER.info("Listing startup items from all locations")
-        
+
         items: List[StartupItem] = []
-        
+
         # Get items from registry
         items.extend(self._get_registry_items())
-        
+
         # Get items from startup folders
         items.extend(self._get_startup_folder_items())
-        
-        # TODO: Add scheduled tasks and services
-        
+
+        # Get items from scheduled tasks
+        items.extend(self._get_scheduled_task_items())
+
+        # Get items from services
+        items.extend(self._get_service_items())
+
         _LOGGER.info("Found %d startup items", len(items))
         return items
     
@@ -290,7 +295,142 @@ class StartupManager(SystemTool):
             _LOGGER.error("Error enumerating startup folder %s: %s", folder, exc)
         
         return items
-    
+
+    def _get_scheduled_task_items(self) -> List[StartupItem]:
+        """Get startup items from scheduled tasks.
+
+        Returns
+        -------
+        List[StartupItem]
+            Startup items from scheduled tasks
+        """
+        items: List[StartupItem] = []
+
+        if platform.system() != "Windows":
+            _LOGGER.debug("Not on Windows, skipping scheduled tasks")
+            return items
+
+        try:
+            # Query scheduled tasks that run at logon or startup
+            result = subprocess.run(
+                ["schtasks", "/query", "/fo", "CSV", "/v"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if result.returncode == 0:
+                lines = result.stdout.strip().split('\n')
+                if len(lines) > 1:
+                    # Parse CSV output (skip header)
+                    for line in lines[1:]:
+                        # Simple CSV parsing - looking for tasks that run at logon/startup
+                        if '"At logon"' in line or '"At startup"' in line:
+                            try:
+                                # Extract task name (first field in CSV)
+                                parts = line.split('","')
+                                if len(parts) > 0:
+                                    task_name = parts[0].strip('"')
+                                    # Check if task is enabled (status field)
+                                    enabled = '"Ready"' in line or '"Running"' in line
+
+                                    item = StartupItem(
+                                        name=task_name,
+                                        command=f"Scheduled Task: {task_name}",
+                                        location=StartupLocation.TASK_SCHEDULER,
+                                        enabled=enabled,
+                                        impact=StartupImpact.UNKNOWN
+                                    )
+                                    items.append(item)
+                                    _LOGGER.debug("Found scheduled task: %s", task_name)
+                            except Exception as exc:
+                                _LOGGER.debug("Error parsing task line: %s", exc)
+                                continue
+        except subprocess.TimeoutExpired:
+            _LOGGER.warning("Timeout while querying scheduled tasks")
+        except FileNotFoundError:
+            _LOGGER.debug("schtasks command not found")
+        except Exception as exc:
+            _LOGGER.error("Error querying scheduled tasks: %s", exc)
+
+        return items
+
+    def _get_service_items(self) -> List[StartupItem]:
+        """Get startup items from Windows services.
+
+        Returns
+        -------
+        List[StartupItem]
+            Startup items from services with automatic startup
+        """
+        items: List[StartupItem] = []
+
+        if platform.system() != "Windows":
+            _LOGGER.debug("Not on Windows, skipping services")
+            return items
+
+        try:
+            # Query services with automatic startup type
+            result = subprocess.run(
+                ["sc", "query", "type=", "service", "state=", "all"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if result.returncode == 0:
+                # Parse sc query output
+                current_service = None
+                service_state = None
+
+                for line in result.stdout.split('\n'):
+                    line = line.strip()
+
+                    if line.startswith("SERVICE_NAME:"):
+                        current_service = line.split(":", 1)[1].strip()
+                    elif line.startswith("STATE") and current_service:
+                        service_state = line
+                    elif line.startswith("DISPLAY_NAME:") and current_service:
+                        display_name = line.split(":", 1)[1].strip()
+
+                        # Check if service has auto-start by querying config
+                        try:
+                            config_result = subprocess.run(
+                                ["sc", "qc", current_service],
+                                capture_output=True,
+                                text=True,
+                                timeout=5
+                            )
+
+                            if "AUTO_START" in config_result.stdout:
+                                enabled = "RUNNING" in service_state if service_state else False
+
+                                item = StartupItem(
+                                    name=display_name,
+                                    command=f"Service: {current_service}",
+                                    location=StartupLocation.SERVICES,
+                                    enabled=enabled,
+                                    impact=StartupImpact.UNKNOWN
+                                )
+                                items.append(item)
+                                _LOGGER.debug("Found auto-start service: %s", current_service)
+                        except subprocess.TimeoutExpired:
+                            _LOGGER.debug("Timeout checking service config for %s", current_service)
+                        except Exception:
+                            pass
+
+                        current_service = None
+                        service_state = None
+
+        except subprocess.TimeoutExpired:
+            _LOGGER.warning("Timeout while querying services")
+        except FileNotFoundError:
+            _LOGGER.debug("sc command not found")
+        except Exception as exc:
+            _LOGGER.error("Error querying services: %s", exc)
+
+        return items
+
     def enable_startup_item(self, item: StartupItem) -> bool:
         """Enable a startup item.
 
@@ -306,7 +446,7 @@ class StartupManager(SystemTool):
         """
         _LOGGER.info("Enabling startup item: %s", item.name)
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would enable startup item: %s", item.name)
             return True
 
@@ -376,7 +516,7 @@ class StartupManager(SystemTool):
         """
         _LOGGER.info("Disabling startup item: %s", item.name)
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would disable startup item: %s", item.name)
             return True
 
@@ -450,7 +590,7 @@ class StartupManager(SystemTool):
         """
         _LOGGER.info("Removing startup item: %s", item.name)
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would remove startup item: %s", item.name)
             return True
 

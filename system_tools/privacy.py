@@ -5,12 +5,22 @@ telemetry collection, and app permissions.
 """
 from __future__ import annotations
 
+import platform
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional
 
 from . import get_logger
 from .base import SystemTool, ToolMetadata
+
+# Import winreg only on Windows, for easier mocking in tests
+try:
+    if platform.system() == "Windows":
+        import winreg
+    else:
+        winreg = None  # type: ignore
+except ImportError:
+    winreg = None  # type: ignore
 
 _LOGGER = get_logger(__name__)
 
@@ -136,17 +146,14 @@ class PrivacyManager(SystemTool):
         """
         _LOGGER.info("Setting telemetry level to %s", level.name)
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would set telemetry level to %s", level.name)
             return True
 
         try:
-            import platform
             if platform.system() != "Windows":
                 _LOGGER.error("Telemetry control only supported on Windows")
                 return False
-
-            import winreg
 
             # Set telemetry level in group policy registry
             key_path = r"SOFTWARE\Policies\Microsoft\Windows\DataCollection"
@@ -187,12 +194,9 @@ class PrivacyManager(SystemTool):
             Current telemetry level
         """
         try:
-            import platform
             if platform.system() != "Windows":
                 _LOGGER.warning("Telemetry control only supported on Windows")
                 return TelemetryLevel.FULL  # Default assumption on non-Windows
-
-            import winreg
 
             key_path = r"SOFTWARE\Policies\Microsoft\Windows\DataCollection"
 
@@ -271,17 +275,14 @@ class PrivacyManager(SystemTool):
         """
         _LOGGER.info("Disabling advertising ID")
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would disable advertising ID")
             return True
 
         try:
-            import platform
             if platform.system() != "Windows":
                 _LOGGER.error("Advertising ID control only supported on Windows")
                 return False
-
-            import winreg
 
             # Disable advertising ID in HKCU
             key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
@@ -319,17 +320,14 @@ class PrivacyManager(SystemTool):
         """
         _LOGGER.info("Disabling Cortana")
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would disable Cortana")
             return True
 
         try:
-            import platform
             if platform.system() != "Windows":
                 _LOGGER.error("Cortana control only supported on Windows")
                 return False
-
-            import winreg
 
             # Disable Cortana via group policy
             key_path = r"SOFTWARE\Policies\Microsoft\Windows\Windows Search"
