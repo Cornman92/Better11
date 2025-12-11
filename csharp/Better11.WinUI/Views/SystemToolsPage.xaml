@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Better11.WinUI.Views.SystemToolsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <ScrollViewer>
+        <StackPanel Spacing="24">
+            <!-- Header -->
+            <TextBlock 
+                Text="System Tools"
+                Style="{StaticResource TitleLargeTextBlockStyle}"/>
+
+            <!-- Registry Tweaks Section -->
+            <StackPanel Spacing="12">
+                <TextBlock 
+                    Text="Registry Tweaks"
+                    Style="{StaticResource SubtitleTextBlockStyle}"/>
+                
+                <InfoBar 
+                    Title="Safety First"
+                    Message="Registry changes are automatically backed up. A restore point will be created before applying tweaks."
+                    Severity="Informational"
+                    IsOpen="True"
+                    IsClosable="False"/>
+
+                <Button Content="Apply Performance Tweaks" Margin="0,8,0,0"/>
+                <Button Content="Apply Privacy Tweaks"/>
+            </StackPanel>
+
+            <!-- Bloatware Removal Section -->
+            <StackPanel Spacing="12">
+                <TextBlock 
+                    Text="Bloatware Removal"
+                    Style="{StaticResource SubtitleTextBlockStyle}"/>
+                
+                <Button Content="Remove Common Bloatware"/>
+                <Button Content="Custom Bloatware Removal..."/>
+            </StackPanel>
+
+            <!-- Services Section -->
+            <StackPanel Spacing="12">
+                <TextBlock 
+                    Text="Windows Services"
+                    Style="{StaticResource SubtitleTextBlockStyle}"/>
+                
+                <Button Content="Optimize Services"/>
+                <Button Content="Manage Services..."/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

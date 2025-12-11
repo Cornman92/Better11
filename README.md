@@ -21,7 +21,6 @@ See [ROADMAP_V0.3-V1.0.md](ROADMAP_V0.3-V1.0.md) for detailed feature roadmap an
 - **Multiple Formats**: Support for MSI, EXE, and AppX installers
 - **Silent Installation**: Automated silent installation with proper arguments
 - **State Tracking**: Persistent tracking of installed applications
-
 ### 🛠️ System Tools
 - **Registry Tweaks**: Apply performance and customization tweaks with automatic backup
 - **Bloatware Removal**: Remove unwanted AppX packages safely
@@ -97,12 +96,19 @@ python -m better11.cli install demo-app
 # Check installation status
 python -m better11.cli status
 
+# Plan an installation (preview dependencies)
+python -m better11.cli plan demo-appx
+
 # Uninstall an application
 python -m better11.cli uninstall demo-app
 
 # Use a custom catalog
 python -m better11.cli --catalog /path/to/catalog.json list
 ```
+
+The `plan` command previews the dependency order, highlights which entries are already installed, and warns if a dependency is missing or part of a cycle. This makes it easy to catch issues before invoking `install`.
+
+The download cache automatically reuses installers that are already present in `~/.better11/downloads` after verifying their SHA-256 hash. Cached hits are surfaced in both the CLI and GUI so you know when a fresh download was (or was not) required.
 
 ### Deployment Automation
 
@@ -137,8 +143,9 @@ This keeps regional settings, administrator credentials, and first-logon automat
 
 #### GUI
 
+Start the Tkinter GUI with:
+
 ```bash
-# Launch the graphical interface
 python -m better11.gui
 ```
 
@@ -199,7 +206,6 @@ apply_performance_preset(preset)
 - **[What's Next?](WHATS_NEXT.md)** - Context and current state
 - **[Setup Complete](SETUP_COMPLETE.md)** - Infrastructure setup summary
 - **[Migration Plan](MIGRATION_PLAN_POWERSHELL_CSHARP_WINUI3.md)** - Optional long-term tech evolution
-
 ## Security Features
 
 Better11 takes security seriously:
