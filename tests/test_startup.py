@@ -2,7 +2,7 @@
 import platform
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -11,7 +11,6 @@ from system_tools.startup import (
     StartupImpact,
     StartupItem,
     StartupManager,
-    STARTUP_REGISTRY_PATHS,
 )
 
 
@@ -268,7 +267,8 @@ class TestStartupManager:
         )
 
         # This should handle non-Windows gracefully
-        # The actual implementation should return False or log a warning
+        result = manager.enable_startup_item(item)
+        assert result is False
 
     def test_remove_startup_folder_item(self):
         """Test removing a startup folder item."""

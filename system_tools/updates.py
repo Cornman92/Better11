@@ -6,7 +6,7 @@ checking for updates, pausing updates, and configuring update settings.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 

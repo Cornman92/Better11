@@ -4,7 +4,6 @@ import os
 import pytest
 
 from system_tools.base import SystemTool, RegistryTool, ToolMetadata
-from system_tools.safety import SafetyError
 
 
 class MockSystemTool(SystemTool):

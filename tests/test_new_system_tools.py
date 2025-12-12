@@ -1,5 +1,4 @@
 """Tests for new system tools (v0.3.0)."""
-import pytest
 
 from system_tools.updates import (
     UpdateType,
@@ -9,8 +8,6 @@ from system_tools.updates import (
 )
 from system_tools.privacy import (
     TelemetryLevel,
-    PrivacySetting,
-    PrivacyPreset,
     PrivacyManager,
 )
 from system_tools.startup import (
@@ -22,7 +19,6 @@ from system_tools.startup import (
 from system_tools.features import (
     FeatureState,
     WindowsFeature,
-    FeaturePreset,
     WindowsFeaturesManager,
 )
 

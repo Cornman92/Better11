@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from better11.apps.models import AppMetadata, InstallerType
-from better11.apps.runner import InstallerError, InstallerResult, InstallerRunner
+from better11.apps.runner import InstallerError, InstallerRunner
 
 
 def _app(app_id: str, installer_type: InstallerType) -> AppMetadata:
