@@ -14,7 +14,6 @@ from typing import List, Optional
 
 from . import get_logger
 from .base import SystemTool, ToolMetadata
-from .safety import ensure_windows
 
 _LOGGER = get_logger(__name__)
 

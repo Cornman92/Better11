@@ -10,16 +10,13 @@ from pathlib import Path
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical, VerticalScroll
+from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import (
     Button,
     DataTable,
     Footer,
     Header,
-    Label,
-    ListItem,
-    ListView,
     Static,
     TabbedContent,
     TabPane,
@@ -29,8 +26,6 @@ from textual.widgets import (
 from better11.apps.manager import AppManager
 from system_tools.startup import StartupManager
 from system_tools.privacy import PrivacyManager
-from system_tools.updates import WindowsUpdateManager
-from system_tools.features import WindowsFeaturesManager
 from system_tools.disk import DiskManager
 from system_tools.network import NetworkManager
 from system_tools.backup import BackupManager

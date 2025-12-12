@@ -148,7 +148,7 @@ class NetworkManager(SystemTool):
         """
         _LOGGER.info("Configuring DNS for adapter: %s", adapter_name)
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would configure DNS to %s", dns_config.primary)
             return True
         
@@ -190,7 +190,7 @@ class NetworkManager(SystemTool):
         """
         _LOGGER.info("Flushing DNS cache")
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would flush DNS cache")
             return True
         
@@ -222,7 +222,7 @@ class NetworkManager(SystemTool):
         """
         _LOGGER.info("Resetting TCP/IP stack")
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would reset TCP/IP stack")
             return True
         
@@ -255,7 +255,7 @@ class NetworkManager(SystemTool):
         """
         _LOGGER.info("Resetting Winsock catalog")
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would reset Winsock")
             return True
         
