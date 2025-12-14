@@ -1,6 +1,6 @@
 # Better11
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![.NET 8.0](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform: Windows 11](https://img.shields.io/badge/platform-Windows%2011-blue.svg)](https://www.microsoft.com/windows)
 
@@ -30,8 +30,8 @@ See [ROADMAP_V0.3-V1.0.md](ROADMAP_V0.3-V1.0.md) for detailed feature roadmap an
 - **Safety Features**: Automatic restore point creation and registry backups
 
 ### 🖥️ Interfaces
-- **CLI**: Full-featured command-line interface
-- **GUI**: User-friendly Tkinter-based graphical interface
+- **CLI**: Full-featured C# command-line interface
+- **GUI**: User-friendly WPF-based graphical interface
 
 ## Quick Start
 
@@ -43,7 +43,7 @@ Better11 is designed for Windows 11 and requires administrator privileges for sy
 
 Before installation, ensure you have:
 - **Supported OS**: Windows 11 (build 22621/22H2 or newer). Earlier builds may have limited DISM feature support.
-- **Python**: Version 3.8 or higher with pip
+- **.NET SDK**: Version 8.0 or higher
 - **PowerShell**: PowerShell 5.1+ (or PowerShell 7) with execution policy allowing local scripts
 - **DISM**: Deployment Image Servicing and Management available in the system PATH
 - **Permissions**: Administrator rights for system modifications
@@ -78,9 +78,10 @@ Before installation, ensure you have:
    Get-ChildItem -Recurse | Unblock-File
    ```
 
-6. **Install Python dependencies** (if any):
-   ```bash
-   pip install -r requirements.txt
+6. **Build the C# projects**:
+   ```powershell
+   cd csharp
+   dotnet build
    ```
 
 ### Application Manager
@@ -88,20 +89,24 @@ Before installation, ensure you have:
 #### Command Line
 
 ```bash
+# Build the CLI project
+cd csharp/Better11.CLI
+dotnet build
+
 # List available applications
-python -m better11.cli list
+dotnet run -- list
 
 # Install an application
-python -m better11.cli install demo-app
+dotnet run -- install demo-exe
 
 # Check installation status
-python -m better11.cli status
+dotnet run -- status
 
 # Uninstall an application
-python -m better11.cli uninstall demo-app
+dotnet run -- uninstall demo-exe
 
 # Use a custom catalog
-python -m better11.cli --catalog /path/to/catalog.json list
+dotnet run -- --catalog /path/to/catalog.json list
 ```
 
 ### Deployment Automation
@@ -110,7 +115,7 @@ Better11 can generate Windows answer files (unattend.xml) to streamline image ca
 
 ```bash
 # Generate a basic unattended install file
-python -m better11.cli deploy unattend \
+dotnet run -- deploy unattend \
   --product-key AAAAA-BBBBB-CCCCC-DDDDD-EEEEE \
   --output ./artifacts/unattend.xml \
   --language en-US \
@@ -119,7 +124,7 @@ python -m better11.cli deploy unattend \
   --first-logon-command "1:echo post-setup"
 
 # Start from a prebuilt lab template and add an extra command
-python -m better11.cli deploy unattend \
+dotnet run -- deploy unattend \
   --template lab \
   --product-key AAAAA-BBBBB-CCCCC-DDDDD-EEEEE \
   --output ./artifacts/unattend-lab.xml \
@@ -138,41 +143,35 @@ This keeps regional settings, administrator credentials, and first-logon automat
 #### GUI
 
 ```bash
-# Launch the graphical interface
-python -m better11.gui
+# Build and run the GUI project
+cd csharp/Better11.GUI
+dotnet build
+dotnet run
 ```
 
 The GUI provides an intuitive interface for browsing, installing, and managing applications.
 
 ### System Tools
 
-```python
-from system_tools.registry import RegistryTweak, apply_tweaks
-from system_tools.bloatware import remove_bloatware
-from system_tools.performance import PerformancePreset, apply_performance_preset
+System tools are available through PowerShell modules and C# services. The PowerShell modules provide the core functionality, while the C# frontend provides a user-friendly interface.
 
-# Apply registry tweaks
-tweaks = [
-    RegistryTweak(
-        hive="HKEY_CURRENT_USER",
-        path=r"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced",
-        name="HideFileExt",
-        value=0,
-        value_type=4
-    )
-]
-apply_tweaks(tweaks)
+PowerShell modules are located in `powershell/Better11/` and can be used directly:
 
-# Remove bloatware
-remove_bloatware(["Microsoft.BingWeather", "Microsoft.GetHelp"])
+```powershell
+# Import the module
+Import-Module .\powershell\Better11\Better11.psd1
 
-# Apply performance preset
-preset = PerformancePreset(
-    name="Gaming",
-    registry_tweaks=[...],
-    service_actions=[...]
-)
-apply_performance_preset(preset)
+# Use disk management
+Get-Better11DiskSpace
+Clear-Better11TempFiles -AgeDays 7
+
+# Use network tools
+Clear-Better11DNSCache
+Set-Better11DNS -PrimaryDNS "8.8.8.8" -SecondaryDNS "8.8.4.4"
+
+# Use power management
+Get-Better11PowerPlans
+Set-Better11PowerPlan -Name "High performance"
 ```
 
 ## Documentation
@@ -215,7 +214,7 @@ Better11 takes security seriously:
 ## Requirements
 
 - **Operating System**: Windows 11 (build 22621/22H2 or newer recommended)
-- **Python**: 3.8 or higher with pip
+- **.NET SDK**: Version 8.0 or higher
 - **PowerShell**: 5.1+ or PowerShell 7
 - **DISM**: Available and accessible in system PATH
 - **Privileges**: Administrator rights required for system modifications
@@ -233,18 +232,19 @@ For offline image editing, Better11 supports:
 
 ```
 better11/
-├── better11/              # Main application package
-│   ├── apps/             # Application management
-│   │   ├── catalog.py    # Catalog management
-│   │   ├── download.py   # Download functionality
-│   │   ├── manager.py    # Main application manager
-│   │   ├── models.py     # Data models
-│   │   ├── runner.py     # Installer execution
-│   │   ├── state_store.py # Installation state
-│   │   └── verification.py # Security verification
-│   ├── cli.py            # Command-line interface
-│   └── gui.py            # Graphical interface
-├── system_tools/         # System enhancement tools
+├── csharp/                # C# frontend and core
+│   ├── Better11.Core/    # Core library
+│   │   ├── Apps/         # Application management
+│   │   ├── Deployment/   # Unattend.xml generation
+│   │   └── Services/     # System services
+│   ├── Better11.CLI/     # Command-line interface
+│   └── Better11.GUI/     # WPF graphical interface
+├── better11/              # Python backend (system tools)
+│   └── apps/             # Application catalog (JSON)
+│       └── catalog.json  # Application catalog
+├── powershell/            # PowerShell modules
+│   └── Better11/         # Better11 PowerShell module
+├── system_tools/         # Python system enhancement tools
 │   ├── bloatware.py      # Bloatware removal
 │   ├── performance.py    # Performance optimization
 │   ├── registry.py       # Registry management

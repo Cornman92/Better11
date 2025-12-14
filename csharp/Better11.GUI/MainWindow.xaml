@@ -1,0 +1,42 @@
+<Window x:Class="Better11.GUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Better11 App Manager" Height="450" Width="800">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Better11 Application Manager" 
+                   FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+        <ListBox x:Name="AppListBox" Grid.Row="1" Margin="0,0,0,10">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding AppId}" FontWeight="Bold" Width="150"/>
+                        <TextBlock Text=" | " Margin="5,0"/>
+                        <TextBlock Text="{Binding Name}" Width="200"/>
+                        <TextBlock Text=" | " Margin="5,0"/>
+                        <TextBlock Text="{Binding Version}"/>
+                        <TextBlock Text=" | " Margin="5,0"/>
+                        <TextBlock Text="{Binding InstallerType}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+            <Button Content="Download" Width="100" Height="30" Margin="5" Click="DownloadButton_Click"/>
+            <Button Content="Install" Width="100" Height="30" Margin="5" Click="InstallButton_Click"/>
+            <Button Content="Uninstall" Width="100" Height="30" Margin="5" Click="UninstallButton_Click"/>
+            <Button Content="Refresh" Width="100" Height="30" Margin="5" Click="RefreshButton_Click"/>
+        </StackPanel>
+
+        <TextBlock x:Name="StatusLabel" Grid.Row="3" Text="Ready" 
+                   HorizontalAlignment="Left" VerticalAlignment="Center"/>
+    </Grid>
+</Window>
