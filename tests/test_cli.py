@@ -125,5 +125,3 @@ def test_deploy_unattend_command(tmp_path: Path) -> None:
     content = output_file.read_text()
     assert "Deployer" in content
     assert "AAAAA-BBBBB-CCCCC-DDDDD-EEEEE" in content
-
-

@@ -112,13 +112,13 @@ class TestConfig:
             config = load_config(path)
             assert isinstance(config, Config)
 
-
     def test_save_and_load_yaml(self):
         """Test saving and loading YAML configuration."""
         try:
-            import yaml as _yaml  # Check if yaml is available
+            import yaml  # Check if yaml is available
         except ImportError:
             pytest.skip("PyYAML not installed")
+        assert hasattr(yaml, "safe_load")
         
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "config.yaml"

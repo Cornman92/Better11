@@ -9,6 +9,7 @@ from better11.apps.manager import DependencyError
 from better11.apps.runner import InstallerRunner
 from better11.apps.verification import DownloadVerifier, VerificationError
 
+
 def test_install_with_dependencies(manager_factory, tmp_path: Path, default_catalog_path: Path) -> None:
     manager = manager_factory(catalog_path=default_catalog_path, runner=InstallerRunner(dry_run=True))
 

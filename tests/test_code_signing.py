@@ -1,6 +1,4 @@
 """Tests for code signing verification."""
-import pytest
-
 from better11.apps.code_signing import (
     SignatureStatus,
     CertificateInfo,

@@ -238,7 +238,7 @@ class DiskManager(SystemTool):
         """
         _LOGGER.info("Cleaning temporary files older than %d days", age_days)
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would clean temporary files")
             return CleanupResult(
                 locations_cleaned=[],
@@ -247,7 +247,6 @@ class DiskManager(SystemTool):
             )
         
         import time
-        from datetime import datetime, timedelta
         
         cutoff_time = time.time() - (age_days * 86400)
         locations_cleaned = []

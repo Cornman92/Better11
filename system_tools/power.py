@@ -105,7 +105,6 @@ class PowerManager(SystemTool):
             )
             
             plans = []
-            active_guid = None
             
             for line in result.stdout.splitlines():
                 if "Power Scheme GUID:" in line:
@@ -113,9 +112,6 @@ class PowerManager(SystemTool):
                     guid = parts[3]
                     name = " ".join(parts[4:]).strip("()")
                     is_active = "*" in line
-                    
-                    if is_active:
-                        active_guid = guid
                     
                     # Determine plan type
                     plan_type = PowerPlanType.CUSTOM
@@ -171,7 +167,7 @@ class PowerManager(SystemTool):
         """
         _LOGGER.info("Setting active power plan: %s", plan_guid)
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would set active power plan")
             return True
         
@@ -203,7 +199,7 @@ class PowerManager(SystemTool):
         """
         _LOGGER.info("Enabling hibernation")
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would enable hibernation")
             return True
         
@@ -235,7 +231,7 @@ class PowerManager(SystemTool):
         """
         _LOGGER.info("Disabling hibernation")
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would disable hibernation")
             return True
         
@@ -272,7 +268,7 @@ class PowerManager(SystemTool):
         """
         _LOGGER.info("Generating battery report")
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would generate battery report")
             return Path("battery-report.html")
         

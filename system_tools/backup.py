@@ -14,7 +14,6 @@ from typing import List, Optional
 
 from . import get_logger
 from .base import SystemTool, ToolMetadata
-from .safety import SafetyError
 
 _LOGGER = get_logger(__name__)
 
@@ -85,7 +84,7 @@ class BackupManager(SystemTool):
         """
         _LOGGER.info("Creating system restore point: %s", description)
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would create restore point")
             return RestorePoint(
                 sequence_number=0,
@@ -106,7 +105,7 @@ class BackupManager(SystemTool):
             Checkpoint-Computer -Description "{description}" -RestorePointType "MODIFY_SETTINGS"
             '''
             
-            result = subprocess.run(
+            subprocess.run(
                 ["powershell", "-Command", ps_script],
                 capture_output=True,
                 text=True,
@@ -199,7 +198,7 @@ class BackupManager(SystemTool):
         """
         _LOGGER.info("Backing up registry hive %s to %s", hive, backup_path)
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would backup registry hive")
             return True
         
@@ -269,7 +268,7 @@ class BackupManager(SystemTool):
         """
         _LOGGER.info("Importing settings from %s", import_path)
         
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info("[DRY RUN] Would import settings")
             return True
         

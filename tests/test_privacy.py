@@ -1,6 +1,6 @@
 """Tests for privacy and telemetry control."""
 import platform
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 

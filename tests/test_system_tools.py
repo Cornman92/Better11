@@ -14,7 +14,9 @@ from system_tools.services import ServiceAction, apply_service_actions
 class SafetyTests(unittest.TestCase):
     def test_confirm_action_accepts_yes_variations(self) -> None:
         responses = iter(["y", "Yes", "n"])
-        input_func = lambda prompt: next(responses)
+
+        def input_func(prompt: str) -> str:
+            return next(responses)
         self.assertTrue(confirm_action("Proceed?", input_func=input_func))
         self.assertTrue(confirm_action("Proceed?", input_func=input_func))
         self.assertFalse(confirm_action("Proceed?", input_func=input_func))
