@@ -2,6 +2,9 @@
 
 A comprehensive toolkit for secure application management and system
 optimization on Windows 11.
+
+Note: The frontend (CLI, GUI, TUI) has been migrated to C#.
+See the csharp/Better11.CLI project for the command-line interface.
 """
 
 __version__ = "0.3.0-dev"
