@@ -30,8 +30,9 @@ See [ROADMAP_V0.3-V1.0.md](ROADMAP_V0.3-V1.0.md) for detailed feature roadmap an
 - **Safety Features**: Automatic restore point creation and registry backups
 
 ### 🖥️ Interfaces
-- **CLI**: Full-featured command-line interface
-- **GUI**: User-friendly Tkinter-based graphical interface
+- **C# CLI**: Modern .NET 8 command-line interface with rich terminal output
+- **PowerShell**: Direct PowerShell module usage
+- **Python Libraries**: Backend libraries for scripting and automation
 
 ## Quick Start
 
@@ -42,13 +43,15 @@ Better11 is designed for Windows 11 and requires administrator privileges for sy
 #### Prerequisites
 
 Before installation, ensure you have:
-- **Supported OS**: Windows 11 (build 22621/22H2 or newer). Earlier builds may have limited DISM feature support.
-- **Python**: Version 3.8 or higher with pip
+- **Supported OS**: Windows 11 (build 22621/22H2 or newer)
+- **.NET 8.0 SDK**: For C# CLI (recommended) - [Download](https://dotnet.microsoft.com/download/dotnet/8.0)
 - **PowerShell**: PowerShell 5.1+ (or PowerShell 7) with execution policy allowing local scripts
-- **DISM**: Deployment Image Servicing and Management available in the system PATH
 - **Permissions**: Administrator rights for system modifications
 - **Internet Access**: Required for downloading application installers
-- **Disk Space**: Several gigabytes of free space for mounting images and staging installers
+
+**Optional**:
+- **Python 3.8+**: Only needed if using Python backend libraries directly
+- **DISM**: For offline image editing features
 
 #### Installation Steps
 
@@ -85,23 +88,28 @@ Before installation, ensure you have:
 
 ### Application Manager
 
-#### Command Line
+#### C# CLI (Recommended)
 
 ```bash
+# Build the C# CLI
+cd csharp
+dotnet build Better11.CLI
+
 # List available applications
-python -m better11.cli list
+dotnet run --project Better11.CLI -- app list
 
 # Install an application
-python -m better11.cli install demo-app
+dotnet run --project Better11.CLI -- app install demo-app
 
 # Check installation status
-python -m better11.cli status
+dotnet run --project Better11.CLI -- app status
 
 # Uninstall an application
-python -m better11.cli uninstall demo-app
+dotnet run --project Better11.CLI -- app uninstall demo-app
 
-# Use a custom catalog
-python -m better11.cli --catalog /path/to/catalog.json list
+# Or use published executable
+better11 app list
+better11 app install demo-app
 ```
 
 ### Deployment Automation
@@ -135,14 +143,26 @@ dism /Image:C:\ /Apply-Unattend:D:\images\unattend.xml
 
 This keeps regional settings, administrator credentials, and first-logon automation consistent across capture/apply workflows.
 
-#### GUI
+#### System Tools
 
 ```bash
-# Launch the graphical interface
-python -m better11.gui
-```
+# Analyze disk space
+dotnet run --project Better11.CLI -- system disk
 
-The GUI provides an intuitive interface for browsing, installing, and managing applications.
+# Cleanup temporary files
+dotnet run --project Better11.CLI -- system cleanup --days 7
+
+# Create restore point
+dotnet run --project Better11.CLI -- system restore-point "Before changes"
+
+# Privacy settings
+dotnet run --project Better11.CLI -- privacy telemetry get
+dotnet run --project Better11.CLI -- privacy telemetry set Security
+
+# Startup management
+dotnet run --project Better11.CLI -- startup list
+dotnet run --project Better11.CLI -- startup disable "Program Name"
+```
 
 ### System Tools
 
@@ -215,12 +235,15 @@ Better11 takes security seriously:
 ## Requirements
 
 - **Operating System**: Windows 11 (build 22621/22H2 or newer recommended)
-- **Python**: 3.8 or higher with pip
+- **.NET 8.0 SDK**: Required for C# CLI
 - **PowerShell**: 5.1+ or PowerShell 7
-- **DISM**: Available and accessible in system PATH
 - **Privileges**: Administrator rights required for system modifications
 - **Internet**: Required for downloading applications and updates
-- **Disk Space**: Several gigabytes recommended for operations
+- **Disk Space**: 500MB for Better11, plus space for applications
+
+**Optional**:
+- **Python 3.8+**: Only if using Python backend libraries
+- **DISM**: Only for offline image editing features
 
 ### Windows Image Formats
 
