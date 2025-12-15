@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Better11.GUI.Views.PerformancePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Loaded="Page_Loaded">
+
+    <ScrollViewer Padding="20">
+        <StackPanel Spacing="16">
+            <!-- Header -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Performance Optimization" Style="{StaticResource TitleTextBlockStyle}"/>
+                    <TextBlock Text="Optimize Windows for speed and responsiveness"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Quick Presets -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Performance Presets" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <TextBlock Text="Apply a collection of optimizations with one click"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Maximum Performance" 
+                                Style="{StaticResource AccentButtonStyle}"
+                                Click="MaximumPreset_Click"/>
+                        <Button Content="Balanced" Click="BalancedPreset_Click"/>
+                        <Button Content="Default" Click="DefaultPreset_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Resource Monitor -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <Grid>
+                        <TextBlock Text="Resource Usage" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        <Button Content="Refresh" Click="RefreshResources_Click" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <Grid ColumnSpacing="24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="4">
+                            <TextBlock>
+                                <Run Text="CPU:" FontWeight="SemiBold"/>
+                                <Run x:Name="CpuUsageText" Text="0%"/>
+                            </TextBlock>
+                            <ProgressBar x:Name="CpuProgressBar" Value="0" Maximum="100"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock>
+                                <Run Text="Memory:" FontWeight="SemiBold"/>
+                                <Run x:Name="MemoryUsageText" Text="0%"/>
+                            </TextBlock>
+                            <ProgressBar x:Name="MemoryProgressBar" Value="0" Maximum="100"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Visual Effects -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Visual Effects" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <TextBlock Text="Trade appearance for performance"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <ComboBox x:Name="VisualEffectsComboBox" Width="200" SelectionChanged="VisualEffects_SelectionChanged">
+                        <ComboBoxItem Content="Best Performance" Tag="BestPerformance"/>
+                        <ComboBoxItem Content="Balanced" Tag="Balanced"/>
+                        <ComboBoxItem Content="Best Appearance" Tag="BestAppearance"/>
+                    </ComboBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Fast Startup -->
+            <Border Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Fast Startup" FontWeight="SemiBold"/>
+                        <TextBlock Text="Hybrid shutdown for faster boot times" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    <ToggleSwitch x:Name="FastStartupToggle" Grid.Column="1" Toggled="FastStartupToggle_Toggled"/>
+                </Grid>
+            </Border>
+
+            <!-- Status -->
+            <ProgressBar x:Name="LoadingBar" IsIndeterminate="True" Visibility="Collapsed"/>
+            <TextBlock x:Name="StatusText" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

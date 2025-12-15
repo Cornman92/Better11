@@ -71,7 +71,18 @@
         'Modules\Network\Network.psd1',
         'Modules\Backup\Backup.psd1',
         'Modules\Power\Power.psd1',
-        'Modules\Common\Common.psd1'
+        'Modules\Common\Common.psd1',
+        'Modules\Safety\Safety.psd1',
+        'Modules\Privacy\Privacy.psd1',
+        'Modules\Updates\Updates.psd1',
+        'Modules\Shell\Shell.psd1',
+        'Modules\Gaming\Gaming.psd1',
+        'Modules\SysInfo\SysInfo.psd1',
+        'Modules\Features\Features.psd1',
+        'Modules\Drivers\Drivers.psd1',
+        'Modules\Tasks\Tasks.psd1',
+        'Modules\Startup\Startup.psd1',
+        'Modules\Performance\Performance.psd1'
     )
 
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry,
@@ -83,6 +94,7 @@
         'Uninstall-Better11App',
         'Update-Better11App',
         'Get-Better11AppStatus',
+        'Get-Better11InstalledApps',
         
         # SystemTools
         'Get-Better11StartupItems',
@@ -93,6 +105,9 @@
         'Remove-Better11Bloatware',
         'Set-Better11Service',
         'Get-Better11ServiceStatus',
+        'Get-Better11RegistryValue',
+        'Set-Better11RegistryValue',
+        'Set-Better11ServiceStartMode',
         
         # Disk
         'Get-Better11DiskSpace',
@@ -111,6 +126,7 @@
         'Get-Better11RestorePoints',
         'New-Better11RestorePoint',
         'Backup-Better11Registry',
+        'Backup-Better11RegistryHive',
         'Export-Better11Settings',
         'Import-Better11Settings',
         
@@ -125,7 +141,111 @@
         'Write-Better11Log',
         'Test-Better11Administrator',
         'Confirm-Better11Action',
-        'New-Better11Backup'
+        'New-Better11Backup',
+        
+        # Safety
+        'Backup-Better11RegistryKey',
+        'Restore-Better11RegistryKey',
+        
+        # Privacy
+        'Get-Better11TelemetryLevel',
+        'Set-Better11TelemetryLevel',
+        'Get-Better11AppPermission',
+        'Set-Better11AppPermission',
+        'Get-Better11AllPermissions',
+        'Disable-Better11AdvertisingId',
+        'Enable-Better11AdvertisingId',
+        'Disable-Better11Cortana',
+        'Enable-Better11Cortana',
+        'Set-Better11PrivacyPreset',
+        
+        # Updates
+        'Get-Better11AvailableUpdates',
+        'Install-Better11Updates',
+        'Suspend-Better11Updates',
+        'Resume-Better11Updates',
+        'Set-Better11ActiveHours',
+        'Get-Better11ActiveHours',
+        'Get-Better11UpdateHistory',
+        'Uninstall-Better11Update',
+        'Get-Better11UpdateSettings',
+        
+        # Shell
+        'Get-Better11TaskbarSettings',
+        'Set-Better11TaskbarAlignment',
+        'Set-Better11SearchMode',
+        'Set-Better11TaskViewVisible',
+        'Set-Better11WidgetsVisible',
+        'Set-Better11CopilotVisible',
+        'Enable-Better11ClassicContextMenu',
+        'Disable-Better11ClassicContextMenu',
+        'Set-Better11ShellPreset',
+        'Restart-Better11Explorer',
+        
+        # Gaming
+        'Get-Better11GamingSettings',
+        'Set-Better11GameMode',
+        'Set-Better11GameBar',
+        'Set-Better11GPUScheduling',
+        'Set-Better11MouseAcceleration',
+        'Disable-Better11NagleAlgorithm',
+        'Enable-Better11NagleAlgorithm',
+        'Set-Better11HighPerformancePower',
+        'Set-Better11GamingPreset',
+        
+        # SysInfo
+        'Get-Better11SystemSummary',
+        'Get-Better11WindowsInfo',
+        'Get-Better11CPUInfo',
+        'Get-Better11MemoryInfo',
+        'Get-Better11GPUInfo',
+        'Get-Better11StorageInfo',
+        'Get-Better11NetworkInfo',
+        'Get-Better11BIOSInfo',
+        'Export-Better11SystemInfo',
+        
+        # Features
+        'Get-Better11OptionalFeatures',
+        'Enable-Better11OptionalFeature',
+        'Disable-Better11OptionalFeature',
+        'Get-Better11InstalledCapabilities',
+        'Add-Better11Capability',
+        'Remove-Better11Capability',
+        
+        # Drivers
+        'Get-Better11Drivers',
+        'Get-Better11DriverIssues',
+        'Backup-Better11Drivers',
+        'Update-Better11Driver',
+        'Export-Better11DriverList',
+        
+        # Tasks
+        'Get-Better11ScheduledTasks',
+        'Enable-Better11ScheduledTask',
+        'Disable-Better11ScheduledTask',
+        'Get-Better11TelemetryTasks',
+        'Disable-Better11TelemetryTasks',
+        'New-Better11ScheduledTask',
+        'Remove-Better11ScheduledTask',
+        
+        # Startup
+        'Get-Better11StartupPrograms',
+        'Enable-Better11StartupProgram',
+        'Disable-Better11StartupProgram',
+        'Add-Better11StartupProgram',
+        'Remove-Better11StartupProgram',
+        'Get-Better11StartupImpact',
+        
+        # Performance
+        'Get-Better11PerformanceSettings',
+        'Set-Better11VisualEffects',
+        'Set-Better11ProcessorScheduling',
+        'Set-Better11VirtualMemory',
+        'Enable-Better11FastStartup',
+        'Disable-Better11FastStartup',
+        'Set-Better11SystemResponsiveness',
+        'Optimize-Better11Performance',
+        'Get-Better11ResourceUsage'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry,

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Better11.GUI.Views.ShellPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Loaded="Page_Loaded">
+
+    <ScrollViewer Padding="20">
+        <StackPanel Spacing="16">
+            <!-- Header -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Shell Customization" Style="{StaticResource TitleTextBlockStyle}"/>
+                    <TextBlock Text="Customize Windows 11 taskbar and shell appearance"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Presets -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Quick Presets" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Windows 10 Style" Style="{StaticResource AccentButtonStyle}" Click="Win10Style_Click"/>
+                        <Button Content="Minimal" Click="Minimal_Click"/>
+                        <Button Content="Default" Click="Default_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Taskbar Settings -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Taskbar" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Alignment" FontWeight="SemiBold"/>
+                        <ComboBox x:Name="AlignmentComboBox" Width="150" SelectionChanged="Alignment_Changed">
+                            <ComboBoxItem Content="Left"/>
+                            <ComboBoxItem Content="Center"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Search Box" FontWeight="SemiBold"/>
+                        <ComboBox x:Name="SearchModeComboBox" Width="200" SelectionChanged="SearchMode_Changed">
+                            <ComboBoxItem Content="Hidden"/>
+                            <ComboBoxItem Content="Icon Only"/>
+                            <ComboBoxItem Content="Search Box"/>
+                            <ComboBoxItem Content="Icon and Label"/>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Button Visibility -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Taskbar Buttons" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Task View" VerticalAlignment="Center"/>
+                        <ToggleSwitch x:Name="TaskViewToggle" Grid.Column="1" Toggled="TaskView_Toggled"/>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Widgets" VerticalAlignment="Center"/>
+                        <ToggleSwitch x:Name="WidgetsToggle" Grid.Column="1" Toggled="Widgets_Toggled"/>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Copilot" VerticalAlignment="Center"/>
+                        <ToggleSwitch x:Name="CopilotToggle" Grid.Column="1" Toggled="Copilot_Toggled"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Context Menu -->
+            <Border Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Classic Context Menu" FontWeight="SemiBold"/>
+                        <TextBlock Text="Use Windows 10-style right-click menu" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    <ToggleSwitch x:Name="ClassicContextMenuToggle" Grid.Column="1" Toggled="ClassicContextMenu_Toggled"/>
+                </Grid>
+            </Border>
+
+            <!-- Apply -->
+            <Button Content="Restart Explorer" Click="RestartExplorer_Click"/>
+
+            <!-- Status -->
+            <ProgressBar x:Name="LoadingBar" IsIndeterminate="True" Visibility="Collapsed"/>
+            <TextBlock x:Name="StatusText" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

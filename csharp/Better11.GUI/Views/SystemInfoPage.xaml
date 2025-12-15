@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Better11.GUI.Views.SystemInfoPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Loaded="Page_Loaded">
+
+    <ScrollViewer Padding="20">
+        <StackPanel Spacing="16">
+            <!-- Header -->
+            <Border Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="System Information" Style="{StaticResource TitleTextBlockStyle}"/>
+                        <TextBlock Text="Detailed hardware and software information"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Export to File" Click="Export_Click"/>
+                </Grid>
+            </Border>
+
+            <!-- System Overview -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="System" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <Grid ColumnSpacing="16" RowSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="Computer Name" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="ComputerNameText" Grid.Column="1"/>
+                        
+                        <TextBlock Grid.Row="1" Text="Manufacturer" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="ManufacturerText" Grid.Row="1" Grid.Column="1"/>
+                        
+                        <TextBlock Grid.Row="2" Text="Model" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="ModelText" Grid.Row="2" Grid.Column="1"/>
+                        
+                        <TextBlock Grid.Row="3" Text="System Type" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="SystemTypeText" Grid.Row="3" Grid.Column="1"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Windows -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Windows" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <Grid ColumnSpacing="16" RowSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="Edition" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="WindowsEditionText" Grid.Column="1"/>
+                        
+                        <TextBlock Grid.Row="1" Text="Version" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="WindowsVersionText" Grid.Row="1" Grid.Column="1"/>
+                        
+                        <TextBlock Grid.Row="2" Text="Build" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="WindowsBuildText" Grid.Row="2" Grid.Column="1"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- CPU -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Processor" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <Grid ColumnSpacing="16" RowSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="Name" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="CPUNameText" Grid.Column="1"/>
+                        
+                        <TextBlock Grid.Row="1" Text="Cores/Threads" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="CPUCoresText" Grid.Row="1" Grid.Column="1"/>
+                        
+                        <TextBlock Grid.Row="2" Text="Max Speed" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="CPUSpeedText" Grid.Row="2" Grid.Column="1"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Memory -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Memory" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <Grid ColumnSpacing="16" RowSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="Total" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="MemoryTotalText" Grid.Column="1"/>
+                        
+                        <TextBlock Grid.Row="1" Text="Type/Speed" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="MemoryTypeText" Grid.Row="1" Grid.Column="1"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Status -->
+            <ProgressBar x:Name="LoadingBar" IsIndeterminate="True" Visibility="Collapsed"/>
+            <TextBlock x:Name="StatusText" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

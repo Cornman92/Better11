@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="Better11.GUI.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Better11.GUI">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Better11 Theme Colors -->
+            <Color x:Key="Better11AccentColor">#0078D4</Color>
+            <Color x:Key="Better11SuccessColor">#107C10</Color>
+            <Color x:Key="Better11WarningColor">#FF8C00</Color>
+            <Color x:Key="Better11ErrorColor">#E81123</Color>
+            
+            <SolidColorBrush x:Key="Better11AccentBrush" Color="{StaticResource Better11AccentColor}"/>
+            <SolidColorBrush x:Key="Better11SuccessBrush" Color="{StaticResource Better11SuccessColor}"/>
+            <SolidColorBrush x:Key="Better11WarningBrush" Color="{StaticResource Better11WarningColor}"/>
+            <SolidColorBrush x:Key="Better11ErrorBrush" Color="{StaticResource Better11ErrorColor}"/>
+            
+            <!-- Card Style -->
+            <Style x:Key="CardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="8"/>
+                <Setter Property="Padding" Value="16"/>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
