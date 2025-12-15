@@ -227,6 +227,30 @@ class PrivacyManager(SystemTool):
             _LOGGER.error("Failed to get telemetry level: %s", exc)
             return TelemetryLevel.FULL  # Default assumption
     
+    # Registry paths for app permissions
+    APP_PERMISSION_PATHS = {
+        PrivacySetting.LOCATION: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location",
+        PrivacySetting.CAMERA: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam",
+        PrivacySetting.MICROPHONE: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone",
+        PrivacySetting.NOTIFICATIONS: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userNotificationListener",
+        PrivacySetting.ACCOUNT_INFO: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userAccountInformation",
+        PrivacySetting.CONTACTS: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\contacts",
+        PrivacySetting.CALENDAR: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\appointments",
+        PrivacySetting.PHONE_CALLS: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\phoneCall",
+        PrivacySetting.CALL_HISTORY: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\phoneCallHistory",
+        PrivacySetting.EMAIL: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\email",
+        PrivacySetting.TASKS: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userDataTasks",
+        PrivacySetting.MESSAGING: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\chat",
+        PrivacySetting.RADIOS: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\radios",
+        PrivacySetting.OTHER_DEVICES: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\bluetoothSync",
+        PrivacySetting.BACKGROUND_APPS: r"SOFTWARE\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications",
+        PrivacySetting.APP_DIAGNOSTICS: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\appDiagnostics",
+        PrivacySetting.DOCUMENTS: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\documentsLibrary",
+        PrivacySetting.PICTURES: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\picturesLibrary",
+        PrivacySetting.VIDEOS: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\videosLibrary",
+        PrivacySetting.FILE_SYSTEM: r"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\broadFileSystemAccess",
+    }
+    
     def set_app_permission(self, setting: PrivacySetting, enabled: bool) -> bool:
         """Set an app permission.
         
@@ -243,8 +267,55 @@ class PrivacyManager(SystemTool):
             True if successful
         """
         _LOGGER.info("Setting %s permission to %s", setting.value, enabled)
-        # TODO: Set registry keys for app permissions
-        raise NotImplementedError("App permissions - coming in v0.3.0")
+        
+        if self.dry_run:
+            _LOGGER.info("[DRY RUN] Would set %s to %s", setting.value, enabled)
+            return True
+        
+        if platform.system() != "Windows":
+            _LOGGER.error("App permissions only supported on Windows")
+            return False
+        
+        key_path = self.APP_PERMISSION_PATHS.get(setting)
+        if not key_path:
+            _LOGGER.error("Unknown permission setting: %s", setting)
+            return False
+        
+        try:
+            # Value: "Allow" or "Deny"
+            value = "Allow" if enabled else "Deny"
+            
+            # Handle background apps differently
+            if setting == PrivacySetting.BACKGROUND_APPS:
+                key = winreg.CreateKeyEx(
+                    winreg.HKEY_CURRENT_USER,
+                    key_path,
+                    0,
+                    winreg.KEY_WRITE
+                )
+                # GlobalUserDisabled: 0 = enabled, 1 = disabled
+                winreg.SetValueEx(key, "GlobalUserDisabled", 0, winreg.REG_DWORD, 0 if enabled else 1)
+                winreg.CloseKey(key)
+            else:
+                # Standard capability access manager setting
+                key = winreg.CreateKeyEx(
+                    winreg.HKEY_CURRENT_USER,
+                    key_path,
+                    0,
+                    winreg.KEY_WRITE
+                )
+                winreg.SetValueEx(key, "Value", 0, winreg.REG_SZ, value)
+                winreg.CloseKey(key)
+            
+            _LOGGER.info("Successfully set %s to %s", setting.value, enabled)
+            return True
+            
+        except PermissionError:
+            _LOGGER.error("Insufficient permissions to set %s", setting.value)
+            return False
+        except Exception as exc:
+            _LOGGER.error("Failed to set %s permission: %s", setting.value, exc)
+            return False
     
     def get_app_permission(self, setting: PrivacySetting) -> bool:
         """Get current state of an app permission.
@@ -259,8 +330,61 @@ class PrivacyManager(SystemTool):
         bool
             True if permission is enabled
         """
-        # TODO: Read from registry
-        raise NotImplementedError("Get app permission - coming in v0.3.0")
+        if platform.system() != "Windows":
+            _LOGGER.warning("App permissions only supported on Windows")
+            return True  # Default to enabled on non-Windows
+        
+        key_path = self.APP_PERMISSION_PATHS.get(setting)
+        if not key_path:
+            _LOGGER.warning("Unknown permission setting: %s", setting)
+            return True
+        
+        try:
+            # Handle background apps differently
+            if setting == PrivacySetting.BACKGROUND_APPS:
+                try:
+                    key = winreg.OpenKey(
+                        winreg.HKEY_CURRENT_USER,
+                        key_path,
+                        0,
+                        winreg.KEY_READ
+                    )
+                    value, _ = winreg.QueryValueEx(key, "GlobalUserDisabled")
+                    winreg.CloseKey(key)
+                    return value == 0  # 0 = enabled
+                except FileNotFoundError:
+                    return True  # Default enabled
+            else:
+                # Standard capability access manager setting
+                try:
+                    key = winreg.OpenKey(
+                        winreg.HKEY_CURRENT_USER,
+                        key_path,
+                        0,
+                        winreg.KEY_READ
+                    )
+                    value, _ = winreg.QueryValueEx(key, "Value")
+                    winreg.CloseKey(key)
+                    return value.lower() == "allow"
+                except FileNotFoundError:
+                    return True  # Default enabled if key doesn't exist
+        
+        except Exception as exc:
+            _LOGGER.error("Failed to get %s permission: %s", setting.value, exc)
+            return True  # Default to enabled on error
+    
+    def get_all_permissions(self) -> Dict[PrivacySetting, bool]:
+        """Get status of all app permissions.
+        
+        Returns
+        -------
+        Dict[PrivacySetting, bool]
+            Dictionary of permission states
+        """
+        permissions = {}
+        for setting in PrivacySetting:
+            permissions[setting] = self.get_app_permission(setting)
+        return permissions
     
     def disable_advertising_id(self) -> bool:
         """Disable Windows advertising ID.
