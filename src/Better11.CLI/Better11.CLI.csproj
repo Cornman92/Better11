@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Better11.CLI</RootNamespace>
+    <AssemblyName>better11</AssemblyName>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Authors>Better11 Contributors</Authors>
+    <Company>Better11</Company>
+    <Product>Better11 CLI</Product>
+    <Description>Command-line interface for Better11</Description>
+    <Copyright>Copyright © 2025 Better11</Copyright>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Better11.Core\Better11.Core.csproj" />
+    <ProjectReference Include="..\Better11.Services\Better11.Services.csproj" />
+    <ProjectReference Include="..\Better11.Infrastructure\Better11.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+
+</Project>

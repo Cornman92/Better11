@@ -1,0 +1,98 @@
+<Page
+    x:Class="Better11.App.Views.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Better11.App.ViewModels"
+    mc:Ignorable="d">
+
+    <Page.DataContext>
+        <vm:SettingsViewModel x:Name="ViewModel"/>
+    </Page.DataContext>
+
+    <ScrollViewer>
+        <StackPanel Padding="24" Spacing="24" MaxWidth="800">
+
+            <!-- Header -->
+            <TextBlock Text="Settings" Style="{StaticResource TitleLargeTextBlockStyle}"/>
+
+            <!-- Appearance Section -->
+            <StackPanel Spacing="16">
+                <TextBlock Text="Appearance" Style="{StaticResource SubtitleTextBlockStyle}"/>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Theme" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <RadioButtons SelectedIndex="{x:Bind ThemeToIndex(ViewModel.SelectedTheme), Mode=TwoWay}">
+                        <RadioButton Content="Light" Tag="Light"/>
+                        <RadioButton Content="Dark" Tag="Dark"/>
+                        <RadioButton Content="Use system setting" Tag="Default"/>
+                    </RadioButtons>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Language" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <ComboBox SelectedValue="{x:Bind ViewModel.SelectedLanguage, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                        <x:String>en-US</x:String>
+                        <x:String>es-ES</x:String>
+                        <x:String>fr-FR</x:String>
+                        <x:String>de-DE</x:String>
+                    </ComboBox>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- General Section -->
+            <StackPanel Spacing="16">
+                <TextBlock Text="General" Style="{StaticResource SubtitleTextBlockStyle}"/>
+
+                <ToggleSwitch Header="Check for updates automatically"
+                             IsOn="{x:Bind ViewModel.CheckForUpdates, Mode=TwoWay}"/>
+
+                <ToggleSwitch Header="Start with Windows"
+                             IsOn="{x:Bind ViewModel.StartWithWindows, Mode=TwoWay}"/>
+            </StackPanel>
+
+            <!-- Paths Section -->
+            <StackPanel Spacing="16">
+                <TextBlock Text="Paths" Style="{StaticResource SubtitleTextBlockStyle}"/>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Downloads Location" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <TextBox Text="{x:Bind ViewModel.DownloadsPath, Mode=TwoWay}"
+                            PlaceholderText="Default downloads location"
+                            IsReadOnly="True"/>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Logs Location" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <TextBox Text="{x:Bind ViewModel.LogsPath, Mode=TwoWay}"
+                            PlaceholderText="Default logs location"
+                            IsReadOnly="True"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Actions -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Save Settings"
+                       Command="{x:Bind ViewModel.SaveSettingsCommand}"
+                       Style="{StaticResource AccentButtonStyle}"/>
+
+                <Button Content="Reset to Defaults"
+                       Command="{x:Bind ViewModel.ResetSettingsCommand}"/>
+            </StackPanel>
+
+            <!-- Activity Indicator -->
+            <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}"
+                         Width="40"
+                         Height="40"
+                         Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}"/>
+
+            <!-- Version Info -->
+            <StackPanel Spacing="4" Opacity="0.6">
+                <TextBlock Text="Better11 v0.2.0-alpha" Style="{StaticResource CaptionTextBlockStyle}"/>
+                <TextBlock Text="© 2025 Better11 Contributors" Style="{StaticResource CaptionTextBlockStyle}"/>
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>
