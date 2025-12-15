@@ -3,7 +3,15 @@ import os
 
 import pytest
 
+from system_tools import safety
 from system_tools.base import SystemTool, RegistryTool, ToolMetadata
+
+
+@pytest.fixture(autouse=True)
+def force_windows_platform(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Force Windows platform detection for system tool tests."""
+
+    monkeypatch.setattr(safety.platform, "system", lambda: "Windows")
 
 
 class MockSystemTool(SystemTool):

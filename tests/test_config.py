@@ -10,6 +10,7 @@ from better11.config import (
     Better11Config,
     ApplicationsConfig,
     SystemToolsConfig,
+    GaYmRPCConfig,
     GUIConfig,
     LoggingConfig,
     load_config,
@@ -26,6 +27,7 @@ class TestConfig:
         assert config.better11.auto_update is True
         assert config.applications.verify_signatures is True
         assert config.system_tools.always_create_restore_point is True
+        assert config.gaymr_pc.enabled is False
         assert config.gui.theme == "system"
         assert config.logging.level == "INFO"
     
@@ -33,10 +35,12 @@ class TestConfig:
         """Test creating config with custom values."""
         config = Config(
             better11=Better11Config(auto_update=False),
-            applications=ApplicationsConfig(require_code_signing=True)
+            applications=ApplicationsConfig(require_code_signing=True),
+            gaymr_pc=GaYmRPCConfig(enabled=True, source="library")
         )
         assert config.better11.auto_update is False
         assert config.applications.require_code_signing is True
+        assert config.gaymr_pc.source == "library"
     
     def test_config_validation_valid(self):
         """Test config validation with valid values."""
@@ -96,13 +100,32 @@ class TestConfig:
         """Test converting config to dictionary."""
         config = Config()
         config_dict = config.to_dict()
-        
+
         assert 'better11' in config_dict
         assert 'applications' in config_dict
         assert 'system_tools' in config_dict
+        assert 'gaymr_pc' in config_dict
         assert 'gui' in config_dict
         assert 'logging' in config_dict
         assert config_dict['better11']['version'] == "0.3.0"
+
+    def test_gaymr_pc_validation_invalid_source(self):
+        config = Config(gaymr_pc=GaYmRPCConfig(source="invalid"))
+        with pytest.raises(ValueError, match="Invalid GaYmR-PC source"):
+            config.validate()
+
+    def test_gaymr_pc_env_overrides(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "config.toml"
+            config = Config(gaymr_pc=GaYmRPCConfig(enabled=False, source="service"))
+            config.save(path)
+
+            monkeypatch.setenv('BETTER11_GAYMR_PC_ENABLED', 'true')
+            monkeypatch.setenv('BETTER11_GAYMR_PC_SOURCE', 'library')
+
+            loaded = Config.load(path)
+            assert loaded.gaymr_pc.enabled is True
+            assert loaded.gaymr_pc.source == 'library'
     
     def test_load_config_convenience_function(self):
         """Test load_config convenience function."""
@@ -192,7 +215,7 @@ class TestConfig:
     @pytest.mark.skipif(os.name != "nt", reason="Windows-specific system path")
     def test_system_path_windows(self, monkeypatch):
         """Test system configuration path on Windows."""
-        monkeypatch.setattr('os.name', 'nt')
+        monkeypatch.setattr(platform, 'system', lambda: 'Windows')
         monkeypatch.setenv('PROGRAMDATA', 'C:\\ProgramData')
 
         path = Config.get_system_path()
