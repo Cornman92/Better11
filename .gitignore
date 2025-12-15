@@ -1,2 +1,22 @@
 __pycache__/
 *.pyc
+
+# Core dumps
+core
+core.*
+
+# C# build artifacts
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
