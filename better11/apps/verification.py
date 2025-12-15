@@ -6,8 +6,11 @@ import hmac
 import logging
 from pathlib import Path
 
+from .code_signing import CodeSigningVerifier, SignatureStatus
 from .models import AppMetadata
 from .code_signing import CodeSigningVerifier, SignatureStatus
+
+_LOGGER = logging.getLogger(__name__)
 
 _LOGGER = logging.getLogger(__name__)
 

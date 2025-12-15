@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Tuple
 
+from better11 import __version__
 from better11.apps.download import DownloadError
 from better11.apps.manager import AppManager, DependencyError
 from better11.apps.verification import VerificationError
@@ -100,15 +101,20 @@ def plan_installation(manager: AppManager, app_id: str) -> int:
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Better11 application manager")
+    parser = argparse.ArgumentParser(description="Better11 - Windows 11 Enhancement Toolkit")
     parser.add_argument(
         "--catalog",
         default=Path(__file__).parent / "apps" / "catalog.json",
         type=Path,
         help="Path to the app catalog JSON",
     )
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Show version information",
+    )
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
     subparsers.add_parser("list", help="List available applications")
 
@@ -123,6 +129,38 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
     status_parser = subparsers.add_parser("status", help="Show installation status")
     status_parser.add_argument("app_id", nargs="?")
+    
+    # Startup management commands
+    startup_parser = subparsers.add_parser("startup", help="Manage startup programs")
+    startup_subparsers = startup_parser.add_subparsers(dest="startup_command")
+    startup_subparsers.add_parser("list", help="List all startup programs")
+    
+    disable_parser = startup_subparsers.add_parser("disable", help="Disable a startup program")
+    disable_parser.add_argument("name", help="Name of startup program to disable")
+    disable_parser.add_argument("--location", help="Location (hklm_run, hkcu_run, etc.)", default="hkcu_run")
+    
+    # Privacy management commands
+    privacy_parser = subparsers.add_parser("privacy", help="Manage privacy and telemetry")
+    privacy_subparsers = privacy_parser.add_subparsers(dest="privacy_command")
+    privacy_subparsers.add_parser("status", help="Show current privacy settings")
+    
+    telemetry_parser = privacy_subparsers.add_parser("set-telemetry", help="Set telemetry level")
+    telemetry_parser.add_argument("level", choices=["security", "basic", "enhanced", "full"])
+    
+    privacy_subparsers.add_parser("disable-ads", help="Disable advertising ID")
+    
+    # Windows Update management commands
+    updates_parser = subparsers.add_parser("updates", help="Manage Windows Updates")
+    updates_subparsers = updates_parser.add_subparsers(dest="updates_command")
+    
+    pause_parser = updates_subparsers.add_parser("pause", help="Pause Windows updates")
+    pause_parser.add_argument("--days", type=int, default=7, help="Number of days to pause (default: 7, max: 35)")
+    
+    updates_subparsers.add_parser("resume", help="Resume Windows updates")
+    
+    active_hours_parser = updates_subparsers.add_parser("set-active-hours", help="Set active hours")
+    active_hours_parser.add_argument("start", type=int, help="Start hour (0-23)")
+    active_hours_parser.add_argument("end", type=int, help="End hour (0-23)")
 
     plan_parser = subparsers.add_parser("plan", help="Show the installation plan for an app")
     plan_parser.add_argument("app_id")
@@ -132,6 +170,53 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
+    
+    # Handle version flag
+    if args.version:
+        print(f"Better11 version {__version__}")
+        return 0
+    
+    # Handle startup commands (don't need catalog)
+    if args.command == "startup":
+        if args.startup_command == "list":
+            return list_startup_items()
+        elif args.startup_command == "disable":
+            return disable_startup_program(args.name, args.location)
+        else:
+            print("Use: better11-cli startup [list|disable]")
+            return 1
+    
+    # Handle privacy commands (don't need catalog)
+    if args.command == "privacy":
+        if args.privacy_command == "status":
+            return privacy_status()
+        elif args.privacy_command == "set-telemetry":
+            return set_telemetry_level(args.level)
+        elif args.privacy_command == "disable-ads":
+            return disable_advertising_id()
+        else:
+            print("Use: better11-cli privacy [status|set-telemetry|disable-ads]")
+            return 1
+    
+    # Handle Windows Update commands (don't need catalog)
+    if args.command == "updates":
+        if args.updates_command == "pause":
+            return pause_windows_updates(args.days)
+        elif args.updates_command == "resume":
+            return resume_windows_updates()
+        elif args.updates_command == "set-active-hours":
+            return set_active_hours(args.start, args.end)
+        else:
+            print("Use: better11-cli updates [pause|resume|set-active-hours]")
+            return 1
+    
+    # Handle app management commands (need catalog)
+    if not args.command:
+        print("Better11 - Windows 11 Enhancement Toolkit")
+        print(f"Version: {__version__}")
+        print("\nUse --help for available commands")
+        return 0
+    
     manager = build_manager(args.catalog)
 
     if args.command == "list":

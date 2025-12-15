@@ -389,6 +389,8 @@ class WindowsUpdateManager(SystemTool):
         """
         if days > 35:
             raise ValueError("Cannot pause updates for more than 35 days")
+        if days < 1:
+            raise ValueError("Days must be at least 1")
         
         if days < 1:
             raise ValueError("Days must be at least 1")
