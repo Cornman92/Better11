@@ -7,11 +7,20 @@ import shutil
 import urllib.request
 from pathlib import Path
 
+from better11.media_catalog import MediaCatalog, MediaEntry
+
 
 class ApplicationManager:
     """Handle downloading media assets with optional checksum validation."""
 
-    def download_media(self, url: str, destination: Path | str, checksum: str | None = None) -> Path:
+    def download_media(
+        self,
+        url: str,
+        destination: Path | str,
+        checksum: str | None = None,
+        *,
+        validate_checksum: bool = True,
+    ) -> Path:
         """
         Download a media file to *destination* and optionally verify its checksum.
 
@@ -26,7 +35,7 @@ class ApplicationManager:
 
         try:
             self._download_file(url, temp_destination)
-            if checksum is not None:
+            if checksum is not None and validate_checksum:
                 self._verify_checksum(temp_destination, checksum)
             temp_destination.replace(destination_path)
             return destination_path
@@ -53,3 +62,31 @@ class ApplicationManager:
             raise ValueError(
                 f"Checksum mismatch for {file_path}: expected {expected_checksum}, got {actual_checksum}"
             )
+
+    def fetch_catalog_entry(
+        self,
+        entry: MediaEntry,
+        repository_root: Path,
+        *,
+        validate_checksum: bool = True,
+    ) -> Path:
+        """Download a catalog entry into the shared repository root."""
+
+        destination = repository_root / entry.target_path
+        return self.download_media(entry.source, destination, entry.checksum, validate_checksum=validate_checksum)
+
+    def export_catalog(self, catalog: MediaCatalog, destination: Path) -> Path:
+        """Persist a catalog to disk for reproducible deployments."""
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(catalog.to_json())
+        return destination
+
+    def import_catalog(self, source: Path | str) -> MediaCatalog:
+        """Load a catalog from a file path or raw JSON string."""
+
+        if isinstance(source, Path) or Path(str(source)).exists():
+            raw = Path(source).read_text()
+        else:
+            raw = str(source)
+        return MediaCatalog.load(raw)

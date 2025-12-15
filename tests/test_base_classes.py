@@ -69,6 +69,7 @@ class TestSystemTool:
     @pytest.mark.skipif(os.name != "nt", reason="Windows-specific safety checks")
     def test_tool_dry_run_mode(self):
         """Test tool in dry-run mode."""
+        monkeypatch.setattr("system_tools.base.ensure_windows", lambda: None)
         tool = MockSystemTool(dry_run=True)
         assert tool.dry_run is True
         result = tool.run(skip_confirmation=True)
@@ -77,6 +78,7 @@ class TestSystemTool:
     @pytest.mark.skipif(os.name != "nt", reason="Windows-specific safety checks")
     def test_tool_run_success(self):
         """Test successful tool execution."""
+        monkeypatch.setattr("system_tools.base.ensure_windows", lambda: None)
         tool = MockSystemTool()
         result = tool.run(skip_confirmation=True)
         assert result is True
