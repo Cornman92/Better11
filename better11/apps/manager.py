@@ -91,12 +91,17 @@ class AppManager:
         if app_id in visited:
             raise DependencyError(f"Circular dependency detected at {app_id}")
         visited.add(app_id)
+        try:
+            app = self.catalog.get(app_id)
+            existing = self.state_store.get(app_id)
+            if existing and existing.installed and existing.version == app.version:
+                logger.info("%s is already installed (version %s)", app_id, app.version)
+                return existing, InstallerResult([], 0, "already installed", "")
 
-        app = self.catalog.get(app_id)
-        existing = self.state_store.get(app_id)
-        if existing and existing.installed and existing.version == app.version:
-            logger.info("%s is already installed (version %s)", app_id, app.version)
-            return existing, InstallerResult([], 0, "already installed", "")
+            dependency_statuses: Dict[str, AppStatus] = {}
+            for dependency_id in app.dependencies:
+                dep_status, _ = self._install_recursive(dependency_id, visited)
+                dependency_statuses[dependency_id] = dep_status
 
         dependency_statuses: Dict[str, AppStatus] = {}
         for dependency_id in app.dependencies:

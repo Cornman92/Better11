@@ -46,8 +46,8 @@ def test_signature_failure(tmp_path: Path) -> None:
         verifier.verify_signature(target_file, "ZmFrZXNpZ25hdHVyZQ==", "ZmFrZWtleQ==")
 
 
-def test_uninstall_prevents_breaking_dependencies(tmp_path: Path) -> None:
-    manager = build_manager(tmp_path)
+def test_uninstall_prevents_breaking_dependencies(manager_factory, tmp_path: Path, default_catalog_path: Path) -> None:
+    manager = manager_factory(catalog_path=default_catalog_path, runner=InstallerRunner(dry_run=True))
     manager.install("demo-appx")
 
     with pytest.raises(DependencyError):
