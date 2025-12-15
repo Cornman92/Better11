@@ -137,7 +137,7 @@ class WindowsUpdateManager(SystemTool):
     
     def check_for_updates(self) -> List[WindowsUpdate]:
         """Check for available Windows updates.
-        
+
         Returns
         -------
         List[WindowsUpdate]
@@ -375,12 +375,12 @@ class WindowsUpdateManager(SystemTool):
     
     def pause_updates(self, days: int = 7) -> bool:
         """Pause Windows updates for specified number of days.
-        
+
         Parameters
         ----------
         days : int
             Number of days to pause updates (max 35)
-        
+
         Returns
         -------
         bool
@@ -451,7 +451,7 @@ class WindowsUpdateManager(SystemTool):
     
     def resume_updates(self) -> bool:
         """Resume Windows updates if paused.
-        
+
         Returns
         -------
         bool
@@ -510,14 +510,14 @@ class WindowsUpdateManager(SystemTool):
     
     def set_active_hours(self, start_hour: int, end_hour: int) -> bool:
         """Set active hours to prevent restart interruptions.
-        
+
         Parameters
         ----------
         start_hour : int
             Start hour (0-23)
         end_hour : int
             End hour (0-23)
-        
+
         Returns
         -------
         bool
@@ -624,12 +624,12 @@ class WindowsUpdateManager(SystemTool):
     
     def get_update_history(self, days: int = 30) -> List[WindowsUpdate]:
         """Get Windows update installation history.
-        
+
         Parameters
         ----------
         days : int
             Number of days of history to retrieve
-        
+
         Returns
         -------
         List[WindowsUpdate]
@@ -741,12 +741,12 @@ class WindowsUpdateManager(SystemTool):
     
     def uninstall_update(self, kb_article: str) -> bool:
         """Uninstall a specific update by KB number.
-        
+
         Parameters
         ----------
         kb_article : str
             KB article number (e.g., "KB5000001")
-        
+
         Returns
         -------
         bool
