@@ -1,0 +1,1 @@
+Wrote contents to /workspace/powershell/Better11/Modules/Power/Functions/Public/New-Better11BatteryReport.ps1
