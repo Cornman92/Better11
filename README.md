@@ -325,18 +325,19 @@ For offline image editing, Better11 supports:
 
 ```
 better11/
-├── better11/              # Main application package
-│   ├── apps/             # Application management
-│   │   ├── catalog.py    # Catalog management
-│   │   ├── download.py   # Download functionality
-│   │   ├── manager.py    # Main application manager
-│   │   ├── models.py     # Data models
-│   │   ├── runner.py     # Installer execution
-│   │   ├── state_store.py # Installation state
-│   │   └── verification.py # Security verification
-│   ├── cli.py            # Command-line interface
-│   └── gui.py            # Graphical interface
-├── system_tools/         # System enhancement tools
+├── csharp/                # C# frontend and core
+│   ├── Better11.Core/    # Core library
+│   │   ├── Apps/         # Application management
+│   │   ├── Deployment/   # Unattend.xml generation
+│   │   └── Services/     # System services
+│   ├── Better11.CLI/     # Command-line interface
+│   └── Better11.GUI/     # WPF graphical interface
+├── better11/              # Python backend (system tools)
+│   └── apps/             # Application catalog (JSON)
+│       └── catalog.json  # Application catalog
+├── powershell/            # PowerShell modules
+│   └── Better11/         # Better11 PowerShell module
+├── system_tools/         # Python system enhancement tools
 │   ├── bloatware.py      # Bloatware removal
 │   ├── performance.py    # Performance optimization
 │   ├── registry.py       # Registry management
