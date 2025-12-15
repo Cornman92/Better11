@@ -33,6 +33,16 @@ class MockSystemTool(SystemTool):
         return True
 
 
+@pytest.fixture(autouse=True)
+def _mock_windows_platform(monkeypatch: pytest.MonkeyPatch) -> None:
+    if sys.platform.startswith("win"):
+        return
+    monkeypatch.setattr(safety, "ensure_windows", lambda: None)
+    from system_tools import base
+
+    monkeypatch.setattr(base, "ensure_windows", lambda: None)
+
+
 class TestToolMetadata:
     """Test ToolMetadata dataclass."""
     
