@@ -288,7 +288,6 @@ Deployment commands gracefully report errors on non-Windows hosts and require DI
 - **[What's Next?](WHATS_NEXT.md)** - Context and current state
 - **[Setup Complete](SETUP_COMPLETE.md)** - Infrastructure setup summary
 - **[Migration Plan](MIGRATION_PLAN_POWERSHELL_CSHARP_WINUI3.md)** - Optional long-term tech evolution
-
 ## Security Features
 
 Better11 takes security seriously:
