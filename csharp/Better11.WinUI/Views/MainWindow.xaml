@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Better11.WinUI.Views.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Better11 - Windows Enhancement Toolkit">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title Bar -->
+        <Grid Grid.Row="0" Background="{ThemeResource SystemControlAcrylicWindowBrush}"
+              Padding="16,0">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE713;" FontSize="20" Margin="0,0,12,0"/>
+                <TextBlock 
+                    Text="Better11 - Windows Enhancement Toolkit"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource TitleTextBlockStyle}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Navigation -->
+        <NavigationView 
+            Grid.Row="1"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="True"
+            PaneDisplayMode="Left"
+            SelectionChanged="NavigationView_SelectionChanged">
+            
+            <NavigationView.MenuItems>
+                <NavigationViewItem 
+                    Content="Applications" 
+                    Tag="applications">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8FE;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem 
+                    Content="System Tools" 
+                    Tag="systemtools">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE90F;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem 
+                    Content="Windows Updates" 
+                    Tag="windowsupdates">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE777;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem 
+                    Content="Privacy" 
+                    Tag="privacy">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE72E;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem 
+                    Content="Startup" 
+                    Tag="startup">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE7E8;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem 
+                    Content="Performance" 
+                    Tag="performance">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE9D9;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem 
+                    Content="Features" 
+                    Tag="features">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <Frame x:Name="ContentFrame" Padding="24"/>
+        </NavigationView>
+    </Grid>
+</Window>
