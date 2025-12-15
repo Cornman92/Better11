@@ -304,12 +304,15 @@ Better11 takes security seriously:
 ## Requirements
 
 - **Operating System**: Windows 11 (build 22621/22H2 or newer recommended)
-- **Python**: 3.8 or higher with pip
+- **.NET 8.0 SDK**: Required for C# CLI
 - **PowerShell**: 5.1+ or PowerShell 7
-- **DISM**: Available and accessible in system PATH
 - **Privileges**: Administrator rights required for system modifications
 - **Internet**: Required for downloading applications and updates
-- **Disk Space**: Several gigabytes recommended for operations
+- **Disk Space**: 500MB for Better11, plus space for applications
+
+**Optional**:
+- **Python 3.8+**: Only if using Python backend libraries
+- **DISM**: Only for offline image editing features
 
 ### Windows Image Formats
 
