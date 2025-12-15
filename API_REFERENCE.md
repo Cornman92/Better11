@@ -10,6 +10,8 @@ Complete API documentation for Better11 modules and functions.
   - [better11.apps.models](#better11appsmodels)
   - [better11.apps.download](#better11appsdownload)
   - [better11.apps.verification](#better11appsverification)
+  - [better11.apps.code_signing](#better11appscode_signing)
+  - [better11.apps.updater](#better11appsupdater)
   - [better11.apps.runner](#better11appsrunner)
   - [better11.apps.state_store](#better11appsstate_store)
 - [System Tools](#system-tools)
@@ -17,7 +19,16 @@ Complete API documentation for Better11 modules and functions.
   - [system_tools.bloatware](#system_toolsbloatware)
   - [system_tools.services](#system_toolsservices)
   - [system_tools.performance](#system_toolsperformance)
+  - [system_tools.updates](#system_toolsupdates)
+  - [system_tools.privacy](#system_toolsprivacy)
+  - [system_tools.startup](#system_toolsstartup)
+  - [system_tools.features](#system_toolsfeatures)
   - [system_tools.safety](#system_toolssafety)
+  - [system_tools.base](#system_toolsbase)
+- [Configuration](#configuration)
+  - [better11.config](#better11config)
+- [Interfaces](#interfaces)
+  - [better11.interfaces](#better11interfaces)
 - [User Interfaces](#user-interfaces)
   - [better11.cli](#better11cli)
   - [better11.gui](#better11gui)
@@ -1012,6 +1023,549 @@ from pathlib import Path
 
 launch_gui(Path("catalog.json"))
 ```
+
+---
+
+## Code Signing Verification
+
+### better11.apps.code_signing
+
+Authenticode signature verification for Windows executables.
+
+#### Enum: `SignatureStatus`
+
+Signature verification status.
+
+**Values:**
+- `VALID` - Signature is valid and trusted
+- `INVALID` - Signature is invalid
+- `UNSIGNED` - File is not signed
+- `REVOKED` - Certificate has been revoked
+- `EXPIRED` - Certificate has expired
+- `UNTRUSTED` - Signature is not trusted
+
+#### Class: `CertificateInfo`
+
+Certificate information extracted from signed file.
+
+**Attributes:**
+- `subject` (str): Certificate subject
+- `issuer` (str): Certificate issuer
+- `serial_number` (str): Certificate serial number
+- `thumbprint` (str): Certificate thumbprint
+- `valid_from` (datetime): Certificate valid from date
+- `valid_to` (datetime): Certificate valid to date
+
+**Methods:**
+- `is_expired() -> bool`: Check if certificate has expired
+
+#### Class: `SignatureInfo`
+
+Complete signature information for a file.
+
+**Attributes:**
+- `status` (SignatureStatus): Signature status
+- `certificate` (Optional[CertificateInfo]): Certificate information
+- `timestamp` (Optional[datetime]): Signature timestamp
+- `hash_algorithm` (Optional[str]): Hash algorithm used
+- `error_message` (Optional[str]): Error message if verification failed
+
+**Methods:**
+- `is_trusted() -> bool`: Check if signature is valid and trusted
+
+#### Class: `CodeSigningVerifier`
+
+Verify Authenticode signatures on Windows executables.
+
+**Constructor:**
+```python
+CodeSigningVerifier(check_revocation: bool = False)
+```
+
+**Parameters:**
+- `check_revocation` (bool): Whether to check certificate revocation (CRL/OCSP)
+
+**Methods:**
+
+##### `verify_signature(file_path: Path) -> SignatureInfo`
+
+Verify the digital signature of a file.
+
+**Parameters:**
+- `file_path` (Path): Path to file to verify
+
+**Returns:** SignatureInfo with verification results
+
+**Example:**
+```python
+from better11.apps.code_signing import CodeSigningVerifier
+from pathlib import Path
+
+verifier = CodeSigningVerifier()
+sig_info = verifier.verify_signature(Path("installer.exe"))
+
+if sig_info.is_trusted():
+    print(f"Signed by: {sig_info.certificate.subject}")
+else:
+    print(f"Verification failed: {sig_info.error_message}")
+```
+
+##### `extract_certificate(file_path: Path) -> Optional[CertificateInfo]`
+
+Extract certificate information from signed file.
+
+**Parameters:**
+- `file_path` (Path): Path to signed file
+
+**Returns:** CertificateInfo if file is signed, None otherwise
+
+##### `is_trusted_publisher(cert_info: CertificateInfo) -> bool`
+
+Check if certificate publisher is in trusted list.
+
+##### `add_trusted_publisher(cert_info: CertificateInfo) -> None`
+
+Add publisher to trusted list.
+
+##### `remove_trusted_publisher(subject: str) -> None`
+
+Remove publisher from trusted list.
+
+---
+
+## Auto-Update System
+
+### better11.apps.updater
+
+Application update management for Better11.
+
+#### Class: `UpdateInfo`
+
+Information about an available update.
+
+**Attributes:**
+- `app_id` (str): Application identifier
+- `current_version` (Version): Currently installed version
+- `available_version` (Version): Available version
+- `download_url` (str): URL to download update
+- `release_notes` (str): Release notes
+- `release_date` (Optional[datetime]): Release date
+- `is_security_update` (bool): Whether this is a security update
+- `is_mandatory` (bool): Whether update is mandatory
+- `size_mb` (float): Update size in MB
+
+#### Class: `ApplicationUpdater`
+
+Manage application updates.
+
+**Constructor:**
+```python
+ApplicationUpdater(
+    app_manager: AppManager,
+    catalog_url: Optional[str] = None
+)
+```
+
+**Parameters:**
+- `app_manager` (AppManager): Application manager instance
+- `catalog_url` (Optional[str]): URL to fetch latest catalog from
+
+**Methods:**
+
+##### `check_for_updates(app_id: Optional[str] = None) -> List[UpdateInfo]`
+
+Check for updates for installed applications.
+
+**Parameters:**
+- `app_id` (Optional[str]): Specific app ID to check, or None for all
+
+**Returns:** List of available updates
+
+**Example:**
+```python
+from better11.apps.updater import ApplicationUpdater
+
+updater = ApplicationUpdater(app_manager)
+updates = updater.check_for_updates()
+
+for update in updates:
+    print(f"{update.app_id}: {update.current_version} -> {update.available_version}")
+```
+
+##### `install_update(update_info: UpdateInfo) -> bool`
+
+Install an application update.
+
+**Parameters:**
+- `update_info` (UpdateInfo): Update information
+
+**Returns:** True if installation successful
+
+##### `install_all_updates(updates: Optional[List[UpdateInfo]] = None) -> List[bool]`
+
+Install all available updates.
+
+#### Class: `Better11Updater`
+
+Self-update capability for Better11.
+
+**Constructor:**
+```python
+Better11Updater(version_check_url: Optional[str] = None)
+```
+
+**Methods:**
+
+##### `get_current_version() -> Version`
+
+Get currently installed Better11 version.
+
+##### `check_for_updates() -> Optional[UpdateInfo]`
+
+Check if newer Better11 version is available.
+
+##### `download_update(version: Version) -> Path`
+
+Download Better11 update package.
+
+##### `install_update(package_path: Path) -> bool`
+
+Install Better11 update (requires restart).
+
+---
+
+## Windows Update Management
+
+### system_tools.updates
+
+Windows Update management and control.
+
+#### Class: `WindowsUpdate`
+
+Representation of a Windows update.
+
+**Attributes:**
+- `id` (str): Update identifier
+- `title` (str): Update title
+- `description` (str): Update description
+- `update_type` (UpdateType): Type of update
+- `size_mb` (float): Update size in MB
+- `status` (UpdateStatus): Update status
+- `kb_article` (Optional[str]): KB article number
+- `is_mandatory` (bool): Whether update is mandatory
+- `requires_restart` (bool): Whether restart is required
+
+#### Class: `WindowsUpdateManager`
+
+Manage Windows Update settings and operations.
+
+**Constructor:**
+```python
+WindowsUpdateManager(config: Optional[dict] = None, dry_run: bool = False)
+```
+
+**Methods:**
+
+##### `check_for_updates() -> List[WindowsUpdate]`
+
+Check for available Windows updates.
+
+**Returns:** List of available updates
+
+**Example:**
+```python
+from system_tools.updates import WindowsUpdateManager
+
+manager = WindowsUpdateManager()
+updates = manager.check_for_updates()
+
+for update in updates:
+    print(f"{update.title} ({update.size_mb} MB)")
+```
+
+##### `install_updates(update_ids: Optional[List[str]] = None) -> bool`
+
+Install specific updates or all available updates.
+
+##### `pause_updates(days: int = 7) -> bool`
+
+Pause Windows updates for specified number of days (max 35).
+
+##### `resume_updates() -> bool`
+
+Resume Windows updates if paused.
+
+##### `set_active_hours(start_hour: int, end_hour: int) -> bool`
+
+Set active hours to prevent restart interruptions.
+
+##### `get_update_history(days: int = 30) -> List[WindowsUpdate]`
+
+Get Windows update installation history.
+
+##### `uninstall_update(kb_article: str) -> bool`
+
+Uninstall a specific update by KB number.
+
+---
+
+## Privacy & Telemetry Control
+
+### system_tools.privacy
+
+Privacy and telemetry control for Windows.
+
+#### Class: `PrivacyManager`
+
+Manage Windows privacy and telemetry settings.
+
+**Constructor:**
+```python
+PrivacyManager(config: Optional[dict] = None, dry_run: bool = False)
+```
+
+**Presets:**
+- `MAXIMUM_PRIVACY`: Disable all telemetry and most app permissions
+- `BALANCED`: Reasonable privacy with essential features enabled
+
+**Methods:**
+
+##### `set_telemetry_level(level: TelemetryLevel) -> bool`
+
+Set Windows telemetry level.
+
+**Parameters:**
+- `level` (TelemetryLevel): Desired telemetry level (SECURITY/BASIC/ENHANCED/FULL)
+
+**Example:**
+```python
+from system_tools.privacy import PrivacyManager, TelemetryLevel
+
+manager = PrivacyManager()
+manager.set_telemetry_level(TelemetryLevel.BASIC)
+```
+
+##### `get_telemetry_level() -> TelemetryLevel`
+
+Get current Windows telemetry level.
+
+##### `set_app_permission(setting: PrivacySetting, enabled: bool) -> bool`
+
+Set an app permission.
+
+##### `get_app_permission(setting: PrivacySetting) -> bool`
+
+Get current state of an app permission.
+
+##### `disable_advertising_id() -> bool`
+
+Disable Windows advertising ID.
+
+##### `disable_cortana() -> bool`
+
+Disable Cortana.
+
+##### `apply_preset(preset: PrivacyPreset) -> bool`
+
+Apply a privacy preset.
+
+---
+
+## Startup Manager
+
+### system_tools.startup
+
+Startup program management.
+
+#### Class: `StartupManager`
+
+Manage Windows startup programs.
+
+**Constructor:**
+```python
+StartupManager(config: Optional[dict] = None, dry_run: bool = False)
+```
+
+**Methods:**
+
+##### `list_startup_items() -> List[StartupItem]`
+
+List all startup programs from all locations.
+
+**Returns:** List of StartupItem objects
+
+**Example:**
+```python
+from system_tools.startup import StartupManager
+
+manager = StartupManager()
+items = manager.list_startup_items()
+
+for item in items:
+    print(f"{item.name}: {item.command} ({item.location.value})")
+```
+
+##### `enable_startup_item(item: StartupItem) -> bool`
+
+Enable a startup item.
+
+##### `disable_startup_item(item: StartupItem) -> bool`
+
+Disable a startup item.
+
+##### `remove_startup_item(item: StartupItem) -> bool`
+
+Permanently remove a startup item.
+
+##### `get_recommendations() -> List[str]`
+
+Get startup optimization recommendations.
+
+---
+
+## Windows Features Manager
+
+### system_tools.features
+
+Windows optional features management.
+
+#### Class: `WindowsFeaturesManager`
+
+Manage Windows optional features.
+
+**Constructor:**
+```python
+WindowsFeaturesManager(config: Optional[dict] = None, dry_run: bool = False)
+```
+
+**Presets:**
+- `DEVELOPER_PRESET`: Enable features useful for developers (WSL, Hyper-V, etc.)
+- `MINIMAL_PRESET`: Disable unnecessary features
+
+**Methods:**
+
+##### `list_features(state: Optional[FeatureState] = None) -> List[WindowsFeature]`
+
+List available Windows features.
+
+**Parameters:**
+- `state` (Optional[FeatureState]): Filter by feature state
+
+**Example:**
+```python
+from system_tools.features import WindowsFeaturesManager, FeatureState
+
+manager = WindowsFeaturesManager()
+features = manager.list_features(FeatureState.ENABLED)
+
+for feature in features:
+    print(f"{feature.display_name}: {feature.state.value}")
+```
+
+##### `enable_feature(feature_name: str) -> bool`
+
+Enable a Windows feature.
+
+##### `disable_feature(feature_name: str) -> bool`
+
+Disable a Windows feature.
+
+##### `get_feature_dependencies(feature_name: str) -> List[str]`
+
+Get feature dependencies.
+
+##### `get_feature_state(feature_name: str) -> FeatureState`
+
+Get the state of a specific feature.
+
+##### `apply_preset(preset: FeaturePreset) -> bool`
+
+Apply a feature preset.
+
+---
+
+## Configuration
+
+### better11.config
+
+Configuration management for Better11.
+
+#### Class: `Config`
+
+Complete Better11 configuration.
+
+**Constructor:**
+```python
+Config.load(path: Optional[Path] = None) -> Config
+```
+
+**Methods:**
+
+##### `load(path: Optional[Path] = None) -> Config`
+
+Load configuration from file with defaults.
+
+**Parameters:**
+- `path` (Optional[Path]): Path to config file. If None, uses default location.
+
+**Returns:** Config instance
+
+**Example:**
+```python
+from better11.config import Config
+
+config = Config.load()
+print(f"Auto-update: {config.better11.auto_update}")
+```
+
+##### `save(path: Optional[Path] = None) -> None`
+
+Save configuration to file.
+
+##### `validate() -> bool`
+
+Validate configuration values.
+
+---
+
+## Interfaces
+
+### better11.interfaces
+
+Common interfaces for Better11 components.
+
+#### Class: `Version`
+
+Semantic version representation.
+
+**Constructor:**
+```python
+Version(major: int, minor: int, patch: int)
+```
+
+**Methods:**
+- `parse(version_str: str) -> Version`: Parse version string
+
+**Example:**
+```python
+from better11.interfaces import Version
+
+v1 = Version(1, 2, 3)
+v2 = Version.parse("1.2.3")
+assert v1 == v2
+assert Version.parse("1.3.0") > v1
+```
+
+#### Interface: `Updatable`
+
+Interface for components that can be updated.
+
+**Methods:**
+- `get_current_version() -> Version`
+- `check_for_updates() -> Optional[Version]`
+- `download_update(version: Version) -> Path`
+- `install_update(package_path: Path) -> bool`
+- `rollback_update() -> bool`
 
 ---
 

@@ -293,9 +293,11 @@ Deployment commands gracefully report errors on non-Windows hosts and require DI
 
 Better11 takes security seriously:
 
+- ✅ **Code Signing Verification**: Authenticode signature verification for all installers (NEW in v0.3.0)
 - ✅ **Hash Verification**: SHA-256 hash checking for all downloads
 - ✅ **HMAC Signatures**: Optional HMAC-SHA256 signature verification
 - ✅ **Domain Vetting**: Only download from pre-approved domains
+- ✅ **Auto-Updates**: Automatic application and Better11 updates (NEW in v0.3.0)
 - ✅ **Restore Points**: Automatic system restore point creation
 - ✅ **Registry Backup**: Automatic backup before registry modifications
 - ✅ **User Confirmation**: Interactive prompts for destructive operations

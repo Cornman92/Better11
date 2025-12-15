@@ -458,6 +458,7 @@ class WindowsUpdateManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Resuming Windows updates")
         
         if self.dry_run:

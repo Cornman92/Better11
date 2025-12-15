@@ -203,6 +203,7 @@ class WindowsFeaturesManager(SystemTool):
         List[WindowsFeature]
             List of Windows features
         """
+        ensure_windows()
         _LOGGER.info("Listing Windows features")
         
         if platform.system() != "Windows":
@@ -404,6 +405,7 @@ class WindowsFeaturesManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Enabling feature: %s", feature_name)
         
         if self.dry_run:
@@ -459,6 +461,7 @@ class WindowsFeaturesManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Disabling feature: %s", feature_name)
         
         if self.dry_run:

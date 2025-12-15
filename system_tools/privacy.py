@@ -12,6 +12,7 @@ from typing import Dict, Optional
 
 from . import get_logger
 from .base import SystemTool, ToolMetadata
+from .safety import ensure_windows
 
 # Import winreg for Windows, use compatibility module for non-Windows
 try:
@@ -20,6 +21,12 @@ except ImportError:
     from . import winreg_compat as winreg
 
 _LOGGER = get_logger(__name__)
+
+# Registry paths for privacy settings
+TELEMETRY_KEY = r"HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+PRIVACY_KEY = r"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager"
+ADVERTISING_KEY = r"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
+CORTANA_KEY = r"HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
 
 
 class TelemetryLevel(Enum):
@@ -141,6 +148,7 @@ class PrivacyManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Setting telemetry level to %s", level.name)
 
         if self.dry_run:
@@ -266,6 +274,7 @@ class PrivacyManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Setting %s permission to %s", setting.value, enabled)
         
         if self.dry_run:
@@ -394,6 +403,7 @@ class PrivacyManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Disabling advertising ID")
 
         if self.dry_run:
@@ -439,6 +449,7 @@ class PrivacyManager(SystemTool):
         bool
             True if successful
         """
+        ensure_windows()
         _LOGGER.info("Disabling Cortana")
 
         if self.dry_run:
