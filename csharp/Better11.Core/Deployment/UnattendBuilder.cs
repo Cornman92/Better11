@@ -178,14 +178,14 @@ public class UnattendBuilder
     {
         var settings = new XElement(ns + "settings", new XAttribute("pass", "windowsPE"));
 
-        var international = CreateComponent(settings, ns, wcm, "Microsoft-Windows-International-Core-WinPE");
+        var international = CreateComponent(ns, wcm, "Microsoft-Windows-International-Core-WinPE");
         international.Add(new XElement(ns + "InputLocale", _inputLocale));
         international.Add(new XElement(ns + "SystemLocale", _language));
         international.Add(new XElement(ns + "UILanguage", _language));
         international.Add(new XElement(ns + "UserLocale", _language));
         settings.Add(international);
 
-        var setup = CreateComponent(settings, ns, wcm, "Microsoft-Windows-Setup");
+        var setup = CreateComponent(ns, wcm, "Microsoft-Windows-Setup");
         var userData = new XElement(ns + "UserData");
         userData.Add(new XElement(ns + "AcceptEula", _acceptEula.ToString().ToLowerInvariant()));
         var productKey = new XElement(ns + "ProductKey");
@@ -200,7 +200,7 @@ public class UnattendBuilder
     private void AppendSpecialize(XElement root, XNamespace ns, XNamespace wcm)
     {
         var settings = new XElement(ns + "settings", new XAttribute("pass", "specialize"));
-        var shellSetup = CreateComponent(settings, ns, wcm, "Microsoft-Windows-Shell-Setup");
+        var shellSetup = CreateComponent(ns, wcm, "Microsoft-Windows-Shell-Setup");
         
         if (!string.IsNullOrEmpty(_computerName))
         {
@@ -215,7 +215,7 @@ public class UnattendBuilder
     private void AppendOobeSystem(XElement root, XNamespace ns, XNamespace wcm)
     {
         var settings = new XElement(ns + "settings", new XAttribute("pass", "oobeSystem"));
-        var shellSetup = CreateComponent(settings, ns, wcm, "Microsoft-Windows-Shell-Setup");
+        var shellSetup = CreateComponent(ns, wcm, "Microsoft-Windows-Shell-Setup");
 
         var oobe = new XElement(ns + "OOBE");
         oobe.Add(new XElement(ns + "HideEULAPage", "true"));
@@ -297,7 +297,7 @@ public class UnattendBuilder
         root.Add(settings);
     }
 
-    private XElement CreateComponent(XElement parent, XNamespace ns, XNamespace wcm, string name)
+    private XElement CreateComponent(XNamespace ns, XNamespace wcm, string name)
     {
         return new XElement(ns + "component",
             new XAttribute("name", name),

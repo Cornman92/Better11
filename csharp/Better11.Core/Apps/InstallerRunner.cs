@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Better11.Core.Apps.Models;
 
 namespace Better11.Core.Apps;
@@ -132,7 +133,7 @@ public class InstallerRunner
     private static List<string> ParseCommandLine(string commandLine)
     {
         var result = new List<string>();
-        var current = new System.Text.StringBuilder();
+        var current = new StringBuilder();
         var inQuotes = false;
 
         foreach (var c in commandLine)
