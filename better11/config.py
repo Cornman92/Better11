@@ -13,7 +13,7 @@ import os
 from dataclasses import dataclass, field, asdict
 import platform
 from pathlib import Path
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Mapping
 
 import platform
 
@@ -298,9 +298,9 @@ class Config:
         return Path.home() / ".better11" / "config.toml"
     
     @staticmethod
-    def get_system_path() -> Path:
+    def get_system_path(os_name: Optional[str] = None, env: Optional[Mapping[str, str]] = None) -> Path:
         """Get system-wide configuration file path.
-        
+
         Returns
         -------
         Path

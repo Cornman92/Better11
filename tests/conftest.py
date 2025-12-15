@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import pathlib
 from pathlib import Path
@@ -32,6 +33,21 @@ if root_path not in sys.path:
 
 DEFAULT_CATALOG = REPO_ROOT / "better11" / "apps" / "catalog.json"
 SAMPLES_DIR = REPO_ROOT / "better11" / "apps" / "samples"
+_ORIGINAL_OS_NAME = os.name
+
+
+@pytest.fixture(autouse=True)
+def reset_os_name() -> None:
+    """Ensure os.name mutations from tests don't leak across the suite."""
+
+    yield
+    os.name = _ORIGINAL_OS_NAME
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """Guarantee OS name is restored before pytest teardown utilities run."""
+
+    os.name = _ORIGINAL_OS_NAME
 
 
 @pytest.fixture

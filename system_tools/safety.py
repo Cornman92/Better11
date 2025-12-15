@@ -16,11 +16,39 @@ class SafetyError(RuntimeError):
     """Raised when a safety precondition fails."""
 
 
-def ensure_windows() -> None:
-    """Ensure the current platform is Windows."""
+def ensure_windows(allow_non_windows: bool = False) -> bool:
+    """Ensure the current platform is Windows.
+
+    Parameters
+    ----------
+    allow_non_windows : bool, optional
+        Allow execution to proceed on non-Windows platforms. When enabled the
+        function returns ``False`` instead of raising :class:`SafetyError` and
+        logs a warning so callers can make an informed decision.
+
+    Returns
+    -------
+    bool
+        ``True`` when running on Windows, ``False`` otherwise when
+        ``allow_non_windows`` is enabled.
+
+    Raises
+    ------
+    SafetyError
+        If the current platform is not Windows and ``allow_non_windows`` is
+        ``False``.
+    """
     system = platform.system().lower()
     if system != "windows":
+        if allow_non_windows:
+            _LOGGER.warning(
+                "Windows platform enforcement bypassed: detected %s; continue at your own risk",
+                system,
+            )
+            return False
         raise SafetyError("Windows platform is required for this operation.")
+
+    return True
 
 
 def confirm_action(prompt: str, input_func: Callable[[str], str] = input) -> bool:

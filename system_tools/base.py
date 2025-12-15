@@ -270,6 +270,23 @@ class SystemTool(ABC):
         except Exception:
             return False
 
+    def _allow_non_windows(self) -> bool:
+        """Determine whether Windows enforcement can be bypassed.
+
+        Priority order:
+        1. Environment variable ``BETTER11_ALLOW_NON_WINDOWS`` (truthy values
+           enable bypass: ``1``, ``true``, ``yes``, ``on``)
+        2. ``allow_non_windows`` flag in the tool configuration
+        3. Default to ``True`` to support local development and CI environments
+           where Windows APIs are unavailable.
+        """
+
+        env_override = os.getenv("BETTER11_ALLOW_NON_WINDOWS")
+        if env_override is not None:
+            return env_override.strip().lower() in {"1", "true", "yes", "on"}
+
+        return bool(self.config.get("allow_non_windows", True))
+
 
 class RegistryTool(SystemTool):
     """Base class for tools that modify the Windows registry.
