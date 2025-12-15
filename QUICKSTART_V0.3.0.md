@@ -15,6 +15,9 @@ cd better11
 
 # Install Python dependencies
 pip install -r requirements.txt
+
+# Build wheel (captures Better11 version/license for deployment)
+python -m system_tools.package_builder --out dist
 ```
 
 ### 2. Run Existing Tests
@@ -37,6 +40,9 @@ python3 -m pytest tests/test_interfaces.py -v
 
 # Test base classes
 python3 -m pytest tests/test_base_classes.py -v
+
+# Smoke test installer packaging (no build artifacts needed)
+python -m system_tools.package_builder --dry-run
 ```
 
 ### 4. Try Configuration System

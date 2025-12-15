@@ -83,6 +83,23 @@ Before installation, ensure you have:
    pip install -r requirements.txt
    ```
 
+7. **Build the Better11 installer package** (reproducible wheel):
+   ```bash
+   python -m system_tools.package_builder --out dist
+   ```
+
+8. **Install the packaged wheel** (documents version/license):
+   ```bash
+   pip install dist/better11-0.3.0.dev0-py3-none-any.whl
+   ```
+   - Current Better11 version: `0.3.0.dev0` (MIT licensed).
+   - Built wheel is MIT-compatible; see `LICENSE` for details.
+
+9. **Rollback**: uninstall the package cleanly if needed:
+   ```bash
+   pip uninstall -y better11
+   ```
+
 ### Application Manager
 
 #### Command Line

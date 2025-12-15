@@ -73,6 +73,15 @@ python --version
 python -m better11.cli list
 ```
 
+**Step 5: Build the installer package**
+
+Create a reproducible wheel so deployments track the exact Better11 version and license (MIT):
+
+```bash
+python -m system_tools.package_builder --out dist
+pip install dist/better11-0.3.0.dev0-py3-none-any.whl
+```
+
 ### Method 2: Download ZIP
 
 **Step 1: Download**
