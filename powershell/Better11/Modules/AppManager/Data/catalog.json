@@ -1,0 +1,45 @@
+{
+  "applications": [
+    {
+      "app_id": "demo-exe",
+      "name": "Demo Utility (EXE)",
+      "version": "1.0.0",
+      "uri": "samples/demo-app.exe",
+      "sha256": "362238e1f381cc1592edf3ba3805f5997a9147fd9223f2ba9714a5c144ba92d6",
+      "installer_type": "exe",
+      "vetted_domains": [],
+      "signature": "bupJSJkoOOmX9l8UpiU5Xb5Cr4WFFJT907XThwZtANY=",
+      "signature_key": "YmV0dGVyMTEtc2lnbmVyLWtleQ==",
+      "silent_args": ["/S"],
+      "dependencies": [],
+      "uninstall_command": "cmd /c echo uninstall demo-exe"
+    },
+    {
+      "app_id": "demo-msi",
+      "name": "Demo Utility (MSI)",
+      "version": "1.0.0",
+      "uri": "samples/demo-app.msi",
+      "sha256": "eeef9f91495ca0d934c43e50e3a9c466a2e67d684f4ad58507bd545b4e8b5c47",
+      "installer_type": "msi",
+      "vetted_domains": [],
+      "signature": "UIWNln90zkFwn0A3UJ87YQC4Rw+L6+7kx+6UtsSs3RE=",
+      "signature_key": "YmV0dGVyMTEtc2lnbmVyLWtleQ==",
+      "silent_args": [],
+      "dependencies": ["demo-exe"]
+    },
+    {
+      "app_id": "demo-appx",
+      "name": "Demo Utility (AppX)",
+      "version": "1.0.0",
+      "uri": "samples/demo-app.appx",
+      "sha256": "061dd5b13d57b709dc2f12e50a3f8a57dbd870649964524a5ccc7e466c33fb24",
+      "installer_type": "appx",
+      "vetted_domains": [],
+      "signature": "ZHqzRTS4dnL3VfCmCIIjAkm/yAxTnx+kBRiNyBUDEWY=",
+      "signature_key": "YmV0dGVyMTEtc2lnbmVyLWtleQ==",
+      "dependencies": ["demo-msi"],
+      "silent_args": [],
+      "uninstall_command": "powershell -NoProfile -Command Remove-AppxPackage DemoUtility"
+    }
+  ]
+}
