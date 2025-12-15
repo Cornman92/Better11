@@ -7,23 +7,23 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
+import logging
 import shutil
-import subprocess
-import sys
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from urllib.request import urlopen
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.request import urlopen, Request
 from urllib.error import URLError
 
 from ..interfaces import Updatable, Version
-from . import get_logger
+from .catalog import AppCatalog
+from .manager import AppManager
+from .state_store import InstallationStateStore
 
-_LOGGER = get_logger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 class UpdateChannel(Enum):
@@ -90,7 +90,7 @@ class AppUpdateInfo:
     app_name: str
     current_version: str
     new_version: str
-    download_url: str
+    download_url: str  # uses catalog metadata uri
     hash_sha256: str
     changelog: str
     size_bytes: int
@@ -119,10 +119,48 @@ class ApplicationUpdater:
         update_url: Optional[str] = None
     ):
         self.catalog_path = catalog_path
-        self.state_path = state_path or Path.home() / ".better11" / "state.json"
-        self.update_url = update_url
+        # Align with AppManager defaults unless explicitly overridden.
+        self.state_path = state_path or Path.home() / ".better11" / "installed.json"
+        self.update_url = update_url  # reserved for future remote catalogs/manifests
         self._pending_updates: List[AppUpdateInfo] = []
     
+    @staticmethod
+    def _parse_loose_version(value: str) -> Tuple[Tuple[int, int, int], Optional[str]]:
+        """Parse a version string into a comparable tuple.
+
+        Supports "1", "1.2", "1.2.3". If parsing fails, returns zeros and keeps
+        original string for fallback comparisons.
+        """
+        raw = (value or "").strip()
+        if not raw:
+            return (0, 0, 0), ""
+
+        parts = raw.split(".")
+        numeric: List[int] = []
+        for part in parts[:3]:
+            if part.isdigit():
+                numeric.append(int(part))
+            else:
+                # Not purely numeric; use fallback.
+                return (0, 0, 0), raw
+
+        while len(numeric) < 3:
+            numeric.append(0)
+        return (numeric[0], numeric[1], numeric[2]), None
+
+    @classmethod
+    def _version_is_newer(cls, candidate: str, installed: str) -> bool:
+        """Return True if candidate version is newer than installed."""
+        cand_tuple, cand_fallback = cls._parse_loose_version(candidate)
+        inst_tuple, inst_fallback = cls._parse_loose_version(installed)
+
+        if cand_fallback is None and inst_fallback is None:
+            return cand_tuple > inst_tuple
+
+        # If either side is non-numeric, fall back to a deterministic comparison.
+        # This is not semver-complete, but avoids crashes and keeps behavior stable.
+        return (candidate or "") > (installed or "")
+
     def check_for_updates(self, app_ids: Optional[List[str]] = None) -> List[AppUpdateInfo]:
         """Check for available updates for installed applications.
         
@@ -138,54 +176,43 @@ class ApplicationUpdater:
         """
         _LOGGER.info("Checking for application updates...")
         
-        updates = []
+        updates: List[AppUpdateInfo] = []
         
         try:
-            # Load current catalog
-            with open(self.catalog_path, 'r') as f:
-                catalog = json.load(f)
-            
-            # Load installation state
-            if not self.state_path.exists():
-                _LOGGER.info("No installation state found")
-                return []
-            
-            with open(self.state_path, 'r') as f:
-                state = json.load(f)
-            
-            installed = state.get("installed", {})
-            
-            # Filter by app_ids if specified
+            catalog = AppCatalog.from_file(self.catalog_path)
+            store = InstallationStateStore(self.state_path)
+
+            installed_statuses = [s for s in store.list() if s.installed]
             if app_ids:
-                installed = {k: v for k, v in installed.items() if k in app_ids}
-            
-            # Check each installed app against catalog
-            for app_id, install_info in installed.items():
-                installed_version = install_info.get("version", "0.0.0")
-                
-                # Find app in catalog
-                for app in catalog.get("applications", []):
-                    if app.get("id") == app_id:
-                        catalog_version = app.get("version", "0.0.0")
-                        
-                        # Compare versions
-                        if self._version_compare(catalog_version, installed_version) > 0:
-                            update = AppUpdateInfo(
-                                app_id=app_id,
-                                app_name=app.get("name", app_id),
-                                current_version=installed_version,
-                                new_version=catalog_version,
-                                download_url=app.get("download_url", ""),
-                                hash_sha256=app.get("sha256", ""),
-                                changelog=app.get("changelog", ""),
-                                size_bytes=app.get("size", 0)
-                            )
-                            updates.append(update)
-                            _LOGGER.info(
-                                "Update available for %s: %s -> %s",
-                                app_id, installed_version, catalog_version
-                            )
-                        break
+                wanted = set(app_ids)
+                installed_statuses = [s for s in installed_statuses if s.app_id in wanted]
+
+            for status in installed_statuses:
+                try:
+                    meta = catalog.get(status.app_id)
+                except KeyError:
+                    _LOGGER.debug("Installed app %s not present in catalog; skipping", status.app_id)
+                    continue
+
+                if self._version_is_newer(meta.version, status.version):
+                    updates.append(
+                        AppUpdateInfo(
+                            app_id=meta.app_id,
+                            app_name=meta.name,
+                            current_version=status.version,
+                            new_version=meta.version,
+                            download_url=meta.uri,
+                            hash_sha256=meta.sha256,
+                            changelog="",
+                            size_bytes=0,
+                        )
+                    )
+                    _LOGGER.info(
+                        "Update available for %s: %s -> %s",
+                        meta.app_id,
+                        status.version,
+                        meta.version,
+                    )
             
             self._pending_updates = updates
             _LOGGER.info("Found %d updates available", len(updates))
@@ -194,31 +221,6 @@ class ApplicationUpdater:
         except Exception as exc:
             _LOGGER.error("Failed to check for updates: %s", exc)
             return []
-    
-    def _version_compare(self, v1: str, v2: str) -> int:
-        """Compare two version strings.
-        
-        Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
-        """
-        try:
-            parts1 = [int(x) for x in v1.split('.')]
-            parts2 = [int(x) for x in v2.split('.')]
-            
-            # Pad shorter version
-            while len(parts1) < len(parts2):
-                parts1.append(0)
-            while len(parts2) < len(parts1):
-                parts2.append(0)
-            
-            for p1, p2 in zip(parts1, parts2):
-                if p1 > p2:
-                    return 1
-                elif p1 < p2:
-                    return -1
-            return 0
-        except ValueError:
-            # Fall back to string comparison
-            return (v1 > v2) - (v1 < v2)
     
     def install_update(self, app_id: str) -> bool:
         """Install an available update for an application.
@@ -247,15 +249,15 @@ class ApplicationUpdater:
             return False
         
         try:
-            # Import app manager for installation
-            from .manager import AppManager
-            
             manager = AppManager(self.catalog_path)
             status, result = manager.install(app_id)
             
-            if status == "installed":
-                _LOGGER.info("Successfully updated %s to version %s", 
-                            app_id, update.new_version)
+            if status.installed:
+                _LOGGER.info(
+                    "Successfully updated %s to version %s",
+                    app_id,
+                    update.new_version,
+                )
                 # Remove from pending updates
                 self._pending_updates = [u for u in self._pending_updates if u.app_id != app_id]
                 return True
@@ -317,53 +319,92 @@ class Better11Updater(Updatable):
         self.channel = channel
         self._update_info: Optional[UpdateInfo] = None
         self._download_path: Optional[Path] = None
+        self._backup_dir: Optional[Path] = None
         self._status = UpdateStatus.UP_TO_DATE
     
-    def get_version(self) -> Version:
-        """Get current Better11 version.
-        
-        Returns
-        -------
-        Version
-            Current version
-        """
-        return Version.from_string(self.BETTER11_VERSION)
-    
-    def check_update(self) -> Optional[Version]:
-        """Check if update is available.
-        
-        Returns
-        -------
-        Optional[Version]
-            New version if available, None otherwise
-        """
+    @staticmethod
+    def _parse_version_loose(value: str) -> Version:
+        """Parse a version string into Version (pads missing parts)."""
+        raw = (value or "").strip().lstrip("v")
+        if not raw:
+            return Version.parse("0.0.0")
+        parts = raw.split(".")
+        while len(parts) < 3:
+            parts.append("0")
+        return Version.parse(".".join(parts[:3]))
+
+    # Updatable interface
+    def get_current_version(self) -> Version:
+        return self._parse_version_loose(self.BETTER11_VERSION)
+
+    def check_for_updates(self) -> Optional[Version]:
+        """Check if a Better11 update is available."""
         _LOGGER.info("Checking for Better11 updates...")
         self._status = UpdateStatus.CHECKING
-        
+
         try:
             update_info = self._fetch_update_manifest()
-            
             if update_info is None:
                 self._status = UpdateStatus.UP_TO_DATE
                 return None
-            
-            current = self.get_version()
+
+            current = self.get_current_version()
             new = update_info.new_version
-            
+
             if new > current:
                 _LOGGER.info("Update available: %s -> %s", current, new)
                 self._update_info = update_info
                 self._status = UpdateStatus.UPDATE_AVAILABLE
                 return new
-            else:
-                _LOGGER.info("Better11 is up to date (%s)", current)
-                self._status = UpdateStatus.UP_TO_DATE
-                return None
-        
+
+            _LOGGER.info("Better11 is up to date (%s)", current)
+            self._status = UpdateStatus.UP_TO_DATE
+            return None
+
         except Exception as exc:
             _LOGGER.error("Failed to check for updates: %s", exc)
             self._status = UpdateStatus.FAILED
             return None
+
+    def download_update(self, version: Version) -> Path:
+        """Download the update package for the specified version.
+
+        Note: The fetched manifest must match the requested version.
+        """
+        if self._update_info is None:
+            # Populate update info if possible.
+            self.check_for_updates()
+        if self._update_info is None:
+            raise RuntimeError("No update info available")
+        if self._update_info.new_version != version:
+            raise ValueError(f"Requested version {version} does not match manifest {self._update_info.new_version}")
+        path = self._download_update()
+        if not path:
+            raise RuntimeError("Failed to download update")
+        return path
+
+    def install_update(self, package_path: Path) -> bool:
+        """Prepare installation of the downloaded update package."""
+        self._status = UpdateStatus.INSTALLING
+        ok = self._install_update(package_path)
+        self._status = UpdateStatus.INSTALLED if ok else UpdateStatus.FAILED
+        return ok
+
+    def rollback_update(self) -> bool:
+        """Best-effort rollback using the most recent backup dir (if any)."""
+        if not self._backup_dir or not self._backup_dir.exists():
+            _LOGGER.error("No backup directory available for rollback")
+            return False
+        try:
+            install_dir = Path(__file__).parent.parent.parent
+            _LOGGER.info("Rolling back installation from %s", self._backup_dir)
+            if install_dir.exists():
+                shutil.rmtree(install_dir)
+            shutil.copytree(self._backup_dir, install_dir)
+            return True
+        except Exception as exc:
+            _LOGGER.error("Rollback failed: %s", exc)
+            return False
     
     def _fetch_update_manifest(self) -> Optional[UpdateInfo]:
         """Fetch update manifest from update URL.
@@ -393,7 +434,8 @@ class Better11Updater(Updatable):
             Update information if available
         """
         try:
-            with urlopen(self.update_url, timeout=30) as response:
+            request = Request(self.update_url, headers={"Accept": "application/vnd.github+json"})
+            with urlopen(request, timeout=30) as response:
                 data = json.loads(response.read().decode())
             
             # Parse GitHub release response
@@ -427,8 +469,8 @@ class Better11Updater(Updatable):
                     pass
             
             return UpdateInfo(
-                current_version=self.get_version(),
-                new_version=Version.from_string(tag_name),
+                current_version=self.get_current_version(),
+                new_version=self._parse_version_loose(tag_name),
                 download_url=download_url,
                 changelog=body,
                 release_date=release_date,
@@ -458,8 +500,8 @@ class Better11Updater(Updatable):
                 data = json.loads(response.read().decode())
             
             return UpdateInfo(
-                current_version=self.get_version(),
-                new_version=Version.from_string(data.get("version", "0.0.0")),
+                current_version=self.get_current_version(),
+                new_version=self._parse_version_loose(data.get("version", "0.0.0")),
                 download_url=data.get("download_url", ""),
                 changelog=data.get("changelog", ""),
                 release_date=datetime.fromisoformat(data.get("release_date", datetime.now().isoformat())),
@@ -605,6 +647,7 @@ class Better11Updater(Updatable):
             # Determine installation directory
             install_dir = Path(__file__).parent.parent.parent
             backup_dir = install_dir.parent / f"better11_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            self._backup_dir = backup_dir
             
             _LOGGER.info("Preparing update installation...")
             _LOGGER.info("Install directory: %s", install_dir)
@@ -723,13 +766,7 @@ def check_for_updates() -> Optional[Version]:
         New version if available
     """
     updater = Better11Updater()
-    return updater.check_update()
-
-
-def get_logger(name: str):
-    """Get a logger instance."""
-    import logging
-    return logging.getLogger(name)
+    return updater.check_for_updates()
 
 
 __all__ = [
