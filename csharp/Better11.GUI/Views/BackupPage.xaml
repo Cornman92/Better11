@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Better11.GUI.Views.BackupPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Loaded="Page_Loaded">
+
+    <ScrollViewer Padding="20">
+        <StackPanel Spacing="16">
+            <!-- Header -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Backup &amp; Restore" Style="{StaticResource TitleTextBlockStyle}"/>
+                    <TextBlock Text="Create system restore points and backup settings"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Create Restore Point -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Create Restore Point" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <TextBlock Text="Create a system restore point before making changes"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="RestorePointDescriptionBox" 
+                                 PlaceholderText="Enter a description..."/>
+                        <Button Grid.Column="1" Content="Create" 
+                                Style="{StaticResource AccentButtonStyle}"
+                                Click="CreateRestorePoint_Click"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Existing Restore Points -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <Grid>
+                        <TextBlock Text="Restore Points" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        <Button Content="Refresh" Click="Refresh_Click" HorizontalAlignment="Right"/>
+                    </Grid>
+                    <ListView x:Name="RestorePointsListView" MaxHeight="300">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Description}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding CreationTime}" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding SequenceNumber}" 
+                                               VerticalAlignment="Center"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </Border>
+
+            <!-- Backup Actions -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Backup Actions" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Backup Registry" Click="BackupRegistry_Click"/>
+                        <Button Content="Export Settings" Click="ExportSettings_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Status -->
+            <ProgressBar x:Name="LoadingBar" IsIndeterminate="True" Visibility="Collapsed"/>
+            <TextBlock x:Name="StatusText" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

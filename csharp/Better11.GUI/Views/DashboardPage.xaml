@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Better11.GUI.Views.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Better11.GUI.Views"
+    Loaded="Page_Loaded">
+
+    <ScrollViewer Padding="20">
+        <StackPanel Spacing="16">
+            <!-- Welcome Card -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Welcome to Better11" Style="{StaticResource TitleTextBlockStyle}"/>
+                    <TextBlock Text="Your Windows 11 enhancement toolkit" 
+                               Style="{StaticResource BodyTextBlockStyle}" 
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- System Info Row -->
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="System" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        <StackPanel Spacing="4">
+                            <TextBlock>
+                                <Run Text="Computer:" FontWeight="SemiBold"/>
+                                <Run x:Name="ComputerNameText" Text="Loading..."/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="Windows:" FontWeight="SemiBold"/>
+                                <Run x:Name="WindowsEditionText" Text="Loading..."/>
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="Build:" FontWeight="SemiBold"/>
+                                <Run x:Name="WindowsBuildText" Text="Loading..."/>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Resources" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="4">
+                                <TextBlock>
+                                    <Run Text="CPU Usage:" FontWeight="SemiBold"/>
+                                    <Run x:Name="CpuUsageText" Text="0%"/>
+                                </TextBlock>
+                                <ProgressBar x:Name="CpuProgressBar" Value="0" Maximum="100"/>
+                            </StackPanel>
+                            <StackPanel Spacing="4">
+                                <TextBlock>
+                                    <Run Text="Memory:" FontWeight="SemiBold"/>
+                                    <Run x:Name="MemoryUsageText" Text="0%"/>
+                                </TextBlock>
+                                <ProgressBar x:Name="MemoryProgressBar" Value="0" Maximum="100"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <Button Content="Refresh" Click="RefreshResources_Click" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Status Cards Row -->
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <FontIcon Glyph="&#xE72E;" FontSize="32" Foreground="{StaticResource Better11AccentBrush}"/>
+                        <TextBlock Text="Privacy" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="PrivacyStatusText" Text="Loading..." HorizontalAlignment="Center" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <FontIcon Glyph="&#xE9D9;" FontSize="32" Foreground="{StaticResource Better11SuccessBrush}"/>
+                        <TextBlock Text="Performance" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="PerformanceStatusText" Text="Loading..." HorizontalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                        <FontIcon Glyph="&#xE896;" FontSize="32" Foreground="{StaticResource Better11AccentBrush}"/>
+                        <TextBlock Text="Backup" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Ready" HorizontalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Quick Actions -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Quick Actions" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Privacy Scan" Style="{StaticResource AccentButtonStyle}"/>
+                        <Button Content="Optimize Performance"/>
+                        <Button Content="Create Restore Point"/>
+                        <Button Content="System Info"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Status Bar -->
+            <TextBlock x:Name="StatusText" 
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Margin="0,8,0,0"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

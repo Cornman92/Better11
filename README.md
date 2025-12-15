@@ -1,363 +1,244 @@
-# Better11
+# Better11 - Windows 11 Enhancement Toolkit
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform: Windows 11](https://img.shields.io/badge/platform-Windows%2011-blue.svg)](https://www.microsoft.com/windows)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/better11/better11)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%2011-blueviolet.svg)](https://www.microsoft.com/windows/windows-11)
 
-An all-around Windows 11 system enhancement toolkit providing secure application management and system optimization tools.
+A comprehensive Windows 11 system optimization, customization, and management toolkit built with native Windows technologies.
 
-## Current Version
+## 🏗️ Architecture
 
-**Version**: 0.3.0-dev (In Development)  
-**Status**: Infrastructure complete, implementation in progress
+Better11 uses a modern three-tier architecture:
 
-See [ROADMAP_V0.3-V1.0.md](ROADMAP_V0.3-V1.0.md) for detailed feature roadmap and [IMPLEMENTATION_PLAN_V0.3.0.md](IMPLEMENTATION_PLAN_V0.3.0.md) for development plan.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         WinUI 3 GUI                             │
+│  (XAML Views, Pages, Navigation, User Controls)                │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   C# ViewModels (MVVM)                         │
+│  (Data binding, Commands, Navigation, State management)        │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     C# Services Layer                          │
+│  (Business logic, PowerShell execution, Data transformation)   │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                PowerShell Backend Modules                       │
+│  (System operations, Registry, WMI, DISM, Services)            │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Windows 11 APIs                             │
+│  (Registry, WMI, COM, DISM, Task Scheduler, Windows Update)    │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-## Features
+## 🚀 Features
 
-### 🚀 Application Manager
-- **Secure Installation**: Download and install vetted applications with hash and HMAC signature verification
-- **Dependency Management**: Automatic dependency resolution and installation
-- **Multiple Formats**: Support for MSI, EXE, and AppX installers
-- **Silent Installation**: Automated silent installation with proper arguments
-- **State Tracking**: Persistent tracking of installed applications
+### Privacy & Security
+- **Telemetry Control**: Manage Windows diagnostic data collection
+- **App Permissions**: Control location, camera, microphone access
+- **Advertising ID**: Disable personalized advertising
+- **Cortana**: Enable/disable the voice assistant
+- **Privacy Presets**: Apply recommended privacy settings with one click
 
-### 🛠️ System Tools
-- **Registry Tweaks**: Apply performance and customization tweaks with automatic backup
-- **Bloatware Removal**: Remove unwanted AppX packages safely
-- **Service Management**: Control Windows services (start, stop, enable, disable)
-- **Performance Presets**: Apply curated performance optimization profiles
-- **Safety Features**: Automatic restore point creation and registry backups
+### Performance Optimization
+- **Visual Effects**: Balance appearance vs. performance
+- **Processor Scheduling**: Optimize for programs or background services
+- **Fast Startup**: Enable/disable hybrid shutdown
+- **Virtual Memory**: Configure page file settings
+- **Performance Presets**: Maximum, Balanced, or Default optimization
 
-### 🖥️ Interfaces
-- **CLI**: Full-featured command-line interface
-- **GUI**: User-friendly Tkinter-based graphical interface
+### Shell Customization
+- **Taskbar Alignment**: Left or center alignment
+- **Search Box**: Hide, show icon only, or full search box
+- **Button Visibility**: Control Task View, Widgets, Copilot buttons
+- **Classic Context Menu**: Restore Windows 10-style right-click menu
+- **Shell Presets**: Windows 10 style, Minimal, or Default
 
-## Quick Start
+### Gaming Optimization
+- **Game Mode**: Optimize system resources during gaming
+- **Xbox Game Bar**: Enable/disable in-game overlay
+- **GPU Scheduling**: Hardware-accelerated GPU scheduling
+- **Mouse Acceleration**: Raw input for consistent aim
+- **Nagle's Algorithm**: Network latency optimization
+- **Gaming Presets**: Maximum performance, Balanced, Default
 
-### Installation
+### System Management
+- **App Management**: View and uninstall applications
+- **Network Tools**: Flush DNS, reset TCP/IP, reset Winsock
+- **Backup & Restore**: System restore points, registry backups
+- **Driver Management**: View, backup, and export drivers
+- **Windows Updates**: Check, pause, and manage updates
+- **Scheduled Tasks**: Manage and disable telemetry tasks
+- **System Information**: Detailed hardware and software info
 
-Better11 is designed for Windows 11 and requires administrator privileges for system modifications.
+## 📁 Project Structure
 
-#### Prerequisites
+```
+/workspace/
+├── csharp/
+│   ├── Better11.sln           # Visual Studio solution
+│   ├── Better11.Core/         # Core services and interfaces
+│   │   ├── Interfaces/        # Service contracts
+│   │   ├── Models/            # Data models
+│   │   ├── Services/          # Service implementations
+│   │   └── PowerShell/        # PowerShell executor
+│   ├── Better11.CLI/          # Command-line interface
+│   ├── Better11.GUI/          # WinUI 3 GUI application
+│   │   ├── Views/             # XAML pages
+│   │   ├── ViewModels/        # MVVM ViewModels
+│   │   └── Controls/          # Custom controls
+│   └── Better11.Tests/        # Unit tests
+└── powershell/
+    └── Better11/
+        ├── Better11.psd1      # Module manifest
+        ├── Better11.psm1      # Root module
+        └── Modules/           # Sub-modules
+            ├── AppManager/    # App management
+            ├── Backup/        # Backup operations
+            ├── Common/        # Shared utilities
+            ├── Disk/          # Disk management
+            ├── Drivers/       # Driver management
+            ├── Features/      # Windows features
+            ├── Gaming/        # Gaming optimization
+            ├── Network/       # Network tools
+            ├── Performance/   # Performance tuning
+            ├── Power/         # Power management
+            ├── Privacy/       # Privacy settings
+            ├── Safety/        # Safety operations
+            ├── Shell/         # Shell customization
+            ├── Startup/       # Startup management
+            ├── SysInfo/       # System information
+            ├── SystemTools/   # System utilities
+            ├── Tasks/         # Scheduled tasks
+            └── Updates/       # Windows Update
+```
 
-Before installation, ensure you have:
-- **Supported OS**: Windows 11 (build 22621/22H2 or newer). Earlier builds may have limited DISM feature support.
-- **Python**: Version 3.8 or higher with pip
-- **PowerShell**: PowerShell 5.1+ (or PowerShell 7) with execution policy allowing local scripts
-- **DISM**: Deployment Image Servicing and Management available in the system PATH
-- **Permissions**: Administrator rights for system modifications
-- **Internet Access**: Required for downloading application installers
-- **Disk Space**: Several gigabytes of free space for mounting images and staging installers
+## 🔧 Requirements
 
-#### Installation Steps
+- **Operating System**: Windows 11 (22H2 or later recommended)
+- **Framework**: .NET 8.0
+- **PowerShell**: 5.1+ or PowerShell 7+
+- **Privileges**: Administrator rights required for most operations
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/yourusername/better11.git
+## 📦 Installation
+
+### From Source
+
+1. Clone the repository:
+   ```powershell
+   git clone https://github.com/better11/better11.git
    cd better11
    ```
 
-2. **Open PowerShell as Administrator**:
-   - Right-click on PowerShell
-   - Select "Run as Administrator"
-   - Navigate to the project directory
-
-3. **Configure PowerShell execution policy** (if needed):
+2. Build the solution:
    ```powershell
-   Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+   dotnet build csharp/Better11.sln
    ```
 
-4. **Verify DISM availability**:
+3. Run the GUI:
    ```powershell
-   dism /?
+   dotnet run --project csharp/Better11.GUI
    ```
 
-5. **Review and unblock scripts** (if needed):
+### PowerShell Module Only
+
+1. Copy the PowerShell module:
    ```powershell
-   Get-ChildItem -Recurse | Unblock-File
+   Copy-Item -Path .\powershell\Better11 -Destination "$env:USERPROFILE\Documents\PowerShell\Modules\Better11" -Recurse
    ```
 
-6. **Install Python dependencies** (if any):
-   ```bash
-   pip install -r requirements.txt
+2. Import the module:
+   ```powershell
+   Import-Module Better11
    ```
 
-### Application Manager
+## 💻 Usage
 
-#### Command Line
-
-```bash
-# List available applications
-python -m better11.cli list
-
-# Install an application
-python -m better11.cli install demo-app
-
-# Check installation status
-python -m better11.cli status
-
-# Uninstall an application
-python -m better11.cli uninstall demo-app
-
-# Use a custom catalog
-python -m better11.cli --catalog /path/to/catalog.json list
-```
-
-### Deployment Automation
-
-Better11 can generate Windows answer files (unattend.xml) to streamline image capture and deployment:
-
-```bash
-# Generate a basic unattended install file
-python -m better11.cli deploy unattend \
-  --product-key AAAAA-BBBBB-CCCCC-DDDDD-EEEEE \
-  --output ./artifacts/unattend.xml \
-  --language en-US \
-  --timezone "Pacific Standard Time" \
-  --admin-user Deployer \
-  --first-logon-command "1:echo post-setup"
-
-# Start from a prebuilt lab template and add an extra command
-python -m better11.cli deploy unattend \
-  --template lab \
-  --product-key AAAAA-BBBBB-CCCCC-DDDDD-EEEEE \
-  --output ./artifacts/unattend-lab.xml \
-  --first-logon-command "2:Install drivers|PowerShell -File .\\drivers.ps1"
-```
-
-Place the generated file alongside captured images and reference it during deployment, for example:
+### PowerShell
 
 ```powershell
-dism /Apply-Image /ImageFile:D:\images\better11.wim /Index:1 /ApplyDir:C:\
-dism /Image:C:\ /Apply-Unattend:D:\images\unattend.xml
+# Import the module
+Import-Module Better11
+
+# Privacy
+Get-Better11TelemetryLevel
+Set-Better11TelemetryLevel -Level Basic
+Set-Better11PrivacyPreset -Preset Maximum
+
+# Performance
+Get-Better11PerformanceSettings
+Optimize-Better11Performance -Preset Maximum
+Set-Better11VisualEffects -Preset BestPerformance
+
+# Gaming
+Get-Better11GamingSettings
+Set-Better11GamingPreset -Preset Maximum
+Disable-Better11NagleAlgorithm
+
+# Shell
+Set-Better11TaskbarAlignment -Alignment Left
+Enable-Better11ClassicContextMenu
+Restart-Better11Explorer
+
+# System Info
+Get-Better11SystemSummary
+Export-Better11SystemInfo -Path "C:\SystemInfo.json"
+
+# Drivers
+Get-Better11Drivers
+Backup-Better11Drivers -Path "D:\DriverBackup"
+
+# Backup
+New-Better11RestorePoint -Description "Before changes"
+Get-Better11RestorePoints
 ```
 
-This keeps regional settings, administrator credentials, and first-logon automation consistent across capture/apply workflows.
-
-#### GUI
+### Command-Line Interface
 
 ```bash
-# Launch the graphical interface
-python -m better11.gui
+# Run the CLI
+dotnet run --project csharp/Better11.CLI -- privacy status
+dotnet run --project csharp/Better11.CLI -- performance optimize --preset maximum
+dotnet run --project csharp/Better11.CLI -- backup create-restore-point "My Backup"
 ```
 
-The GUI provides an intuitive interface for browsing, installing, and managing applications.
+## 🛡️ Safety Features
 
-### System Tools
+- **Restore Points**: Automatically create system restore points before changes
+- **Registry Backups**: Export registry keys before modifications
+- **Administrator Check**: Verify privileges before system operations
+- **Confirmation Prompts**: Confirm dangerous operations
 
-```python
-from system_tools.registry import RegistryTweak, apply_tweaks
-from system_tools.bloatware import remove_bloatware
-from system_tools.performance import PerformancePreset, apply_performance_preset
+## 📖 Documentation
 
-# Apply registry tweaks
-tweaks = [
-    RegistryTweak(
-        hive="HKEY_CURRENT_USER",
-        path=r"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced",
-        name="HideFileExt",
-        value=0,
-        value_type=4
-    )
-]
-apply_tweaks(tweaks)
+- [API Reference](API_REFERENCE.md) - Complete API documentation
+- [User Guide](USER_GUIDE.md) - End-user documentation
+- [Architecture](ARCHITECTURE.md) - Technical architecture details
+- [Contributing](CONTRIBUTING.md) - Contribution guidelines
 
-# Remove bloatware
-remove_bloatware(["Microsoft.BingWeather", "Microsoft.GetHelp"])
+## 🤝 Contributing
 
-# Apply performance preset
-preset = PerformancePreset(
-    name="Gaming",
-    registry_tweaks=[...],
-    service_actions=[...]
-)
-apply_performance_preset(preset)
-```
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
-## Documentation
-
-### User Documentation
-- **[Installation Guide](INSTALL.md)** - Detailed setup instructions
-- **[User Guide](USER_GUIDE.md)** - Comprehensive usage documentation
-- **[Security](SECURITY.md)** - Security policies and reporting
-
-### Developer Documentation
-- **[API Reference](API_REFERENCE.md)** - Complete API documentation
-- **[Architecture](ARCHITECTURE.md)** - System design and architecture
-- **[Contributing](CONTRIBUTING.md)** - Development guidelines
-- **[Changelog](CHANGELOG.md)** - Version history and changes
-
-### Planning & Roadmap (v0.3.0+)
-- **[📊 Executive Summary](EXECUTIVE_SUMMARY.md)** - High-level overview for decision makers ⭐ LEADERS START HERE
-- **[📋 Planning Index](PLANNING_INDEX.md)** - Navigation guide for all planning documents
-- **[🚀 Forward Plan](FORWARD_PLAN.md)** - Comprehensive 12-week strategy for moving forward
-- **[⚡ Quick Start Guide](QUICKSTART_IMPLEMENTATION.md)** - Start implementing v0.3.0 TODAY 💻
-- **[🗺️ Visual Roadmap](ROADMAP_VISUAL.md)** - Timeline and milestone visualization
-- **[Roadmap v0.3-v1.0](ROADMAP_V0.3-V1.0.md)** - Feature roadmap through v1.0
-- **[Implementation Plan v0.3.0](IMPLEMENTATION_PLAN_V0.3.0.md)** - Detailed technical development plan
-- **[What's Next?](WHATS_NEXT.md)** - Context and current state
-- **[Setup Complete](SETUP_COMPLETE.md)** - Infrastructure setup summary
-- **[Migration Plan](MIGRATION_PLAN_POWERSHELL_CSHARP_WINUI3.md)** - Optional long-term tech evolution
-
-## Security Features
-
-Better11 takes security seriously:
-
-- ✅ **Hash Verification**: SHA-256 hash checking for all downloads
-- ✅ **HMAC Signatures**: Optional HMAC-SHA256 signature verification
-- ✅ **Domain Vetting**: Only download from pre-approved domains
-- ✅ **Restore Points**: Automatic system restore point creation
-- ✅ **Registry Backup**: Automatic backup before registry modifications
-- ✅ **User Confirmation**: Interactive prompts for destructive operations
-- ✅ **Dry-Run Mode**: Test operations without making changes
-
-## Requirements
-
-- **Operating System**: Windows 11 (build 22621/22H2 or newer recommended)
-- **Python**: 3.8 or higher with pip
-- **PowerShell**: 5.1+ or PowerShell 7
-- **DISM**: Available and accessible in system PATH
-- **Privileges**: Administrator rights required for system modifications
-- **Internet**: Required for downloading applications and updates
-- **Disk Space**: Several gigabytes recommended for operations
-
-### Windows Image Formats
-
-For offline image editing, Better11 supports:
-- **WIM** (Windows Imaging Format)
-- **ESD** (Electronic Software Download format)
-- **ISO** (Optical disc image files)
-
-## Project Structure
-
-```
-better11/
-├── better11/              # Main application package
-│   ├── apps/             # Application management
-│   │   ├── catalog.py    # Catalog management
-│   │   ├── download.py   # Download functionality
-│   │   ├── manager.py    # Main application manager
-│   │   ├── models.py     # Data models
-│   │   ├── runner.py     # Installer execution
-│   │   ├── state_store.py # Installation state
-│   │   └── verification.py # Security verification
-│   ├── cli.py            # Command-line interface
-│   └── gui.py            # Graphical interface
-├── system_tools/         # System enhancement tools
-│   ├── bloatware.py      # Bloatware removal
-│   ├── performance.py    # Performance optimization
-│   ├── registry.py       # Registry management
-│   ├── safety.py         # Safety utilities
-│   └── services.py       # Service management
-└── tests/                # Test suite
-```
-
-## Catalog Format
-
-Applications are defined in `better11/apps/catalog.json`:
-
-```json
-{
-  "applications": [
-    {
-      "app_id": "example-app",
-      "name": "Example Application",
-      "version": "1.0.0",
-      "uri": "https://example.com/installer.msi",
-      "sha256": "abc123...",
-      "installer_type": "msi",
-      "vetted_domains": ["example.com"],
-      "signature": "base64_signature",
-      "signature_key": "base64_key",
-      "dependencies": ["dependency-app"],
-      "silent_args": ["/quiet", "/norestart"],
-      "uninstall_command": "msiexec /x {GUID} /qn"
-    }
-  ]
-}
-```
-
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
-- Setting up your development environment
-- Coding standards and best practices
-- Submitting pull requests
-- Running tests
-
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Usage Notes
+## 🙏 Acknowledgments
 
-### Live System Editing
+- Microsoft for Windows 11 and WinUI 3
+- The open-source community
 
-Run from an elevated PowerShell session to make changes to the currently running Windows installation:
+---
 
-```powershell
-# Add a Windows capability live
-DISM /Online /Add-Capability /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0
-
-# Enable a Windows feature live
-DISM /Online /Enable-Feature /FeatureName:NetFx3 /All
-```
-
-### Offline Image Editing
-
-Mount a Windows image, apply changes, and commit them:
-
-```powershell
-# Mount the image
-$dismMount = "C:\Mount"
-$imagePath = "D:\sources\install.wim"
-DISM /Mount-WIM /WimFile:$imagePath /Index:1 /MountDir:$dismMount
-
-# Add packages, drivers, or registry tweaks to the mounted image
-DISM /Image:$dismMount /Add-Package /PackagePath:"D:\updates\kb.msu"
-DISM /Image:$dismMount /Add-Driver /Driver:"D:\drivers" /Recurse
-
-# Commit changes and unmount
-DISM /Unmount-WIM /MountDir:$dismMount /Commit
-```
-
-### Application Download and Install
-
-Use PowerShell to download and run installers with proper verification:
-
-```powershell
-# Download installer
-$installer = "C:\Temp\app-setup.exe"
-Invoke-WebRequest -Uri "https://example.com/app-setup.exe" -OutFile $installer
-
-# Verify checksum (optional but recommended)
-Get-FileHash $installer -Algorithm SHA256
-
-# Install silently if supported
-Start-Process -FilePath $installer -ArgumentList "/quiet" -Wait -Verb RunAs
-```
-
-## Disclaimer
-
-⚠️ **Important**: Better11 modifies system settings and installs software. While safety features are built-in:
-
-### Safety Recommendations
-- **Back up first**: Create a system restore point or full image backup before modifying live systems
-- **Offline images**: Keep a copy of the original WIM/ESD before servicing; work on duplicates where possible
-- **Administrator context**: Running without elevation will cause many operations to fail or partially apply
-- **Disk space**: Mounting images and staging installers requires several gigabytes of free space
-- **Integrity**: Verify installer authenticity (hash/signature) and only use trusted download sources
-- **Test environment**: Test in a virtual machine first before applying to production systems
-- **Review operations**: Always review all operations before confirming
-- **Use at your own risk**: The authors are not responsible for any system damage or data loss
-
-## Support
-
-- 📖 [Documentation](docs/)
-- 🐛 [Issue Tracker](https://github.com/yourusername/better11/issues)
-- 💬 [Discussions](https://github.com/yourusername/better11/discussions)
-
-## Acknowledgments
-
-Better11 was created to simplify Windows 11 customization and application management while maintaining security and safety standards.
+**Better11** - Making Windows 11 better, one tweak at a time.
