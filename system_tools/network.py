@@ -5,6 +5,8 @@ and network diagnostics tools.
 """
 from __future__ import annotations
 
+import platform
+import re
 import subprocess
 from dataclasses import dataclass
 from enum import Enum
@@ -101,8 +103,7 @@ class NetworkManager(SystemTool):
             List of network adapters
         """
         _LOGGER.info("Listing network adapters")
-        
-        import platform
+
         if platform.system() != "Windows":
             _LOGGER.warning("Full adapter listing only supported on Windows")
             return []
@@ -126,9 +127,117 @@ class NetworkManager(SystemTool):
     
     def _parse_ipconfig_output(self, output: str) -> List[NetworkAdapter]:
         """Parse ipconfig output into adapter list."""
-        # Simplified parser - in production, use more robust parsing
         adapters: List[NetworkAdapter] = []
-        # TODO: Implement proper ipconfig parsing
+
+        current: Optional[NetworkAdapter] = None
+        pending_dns: List[str] = []
+        in_dns_block = False
+
+        def flush_current() -> None:
+            nonlocal current, pending_dns, in_dns_block
+            if current is None:
+                return
+            # Heuristic: if ipconfig doesn't provide Media State, treat adapters
+            # with an IPv4 address (or gateway) as UP.
+            if current.status == AdapterStatus.UNKNOWN and (current.ipv4_address or current.ipv4_gateway):
+                current.status = AdapterStatus.UP
+            if pending_dns:
+                current.dns_servers = pending_dns.copy()
+            adapters.append(current)
+            current = None
+            pending_dns = []
+            in_dns_block = False
+
+        # Example headers:
+        # "Ethernet adapter Ethernet:"
+        # "Wireless LAN adapter Wi-Fi:"
+        adapter_header = re.compile(r"^(?P<prefix>.+?)\s+adapter\s+(?P<name>.+?):\s*$", re.IGNORECASE)
+
+        def normalize_bool(value: str) -> Optional[bool]:
+            lowered = value.strip().lower()
+            if lowered in ("yes", "true"):
+                return True
+            if lowered in ("no", "false"):
+                return False
+            return None
+
+        def parse_value(line: str) -> Optional[str]:
+            # Matches the "Key . . . : Value" layout.
+            if ":" not in line:
+                return None
+            return line.split(":", 1)[1].strip()
+
+        for raw_line in output.splitlines():
+            line = raw_line.rstrip("\r\n")
+            stripped = line.strip()
+
+            if not stripped:
+                # Blank line ends current DNS multi-line block and often separates adapters.
+                in_dns_block = False
+                continue
+
+            header_match = adapter_header.match(stripped)
+            if header_match:
+                flush_current()
+                name = header_match.group("name").strip()
+                current = NetworkAdapter(
+                    name=name,
+                    description="",
+                    mac_address="",
+                    status=AdapterStatus.UNKNOWN,
+                    dns_servers=[],
+                )
+                continue
+
+            if current is None:
+                continue
+
+            # Continuation line for DNS servers block (indented line without key).
+            if in_dns_block and ":" not in stripped:
+                candidate = stripped
+                if candidate:
+                    pending_dns.append(candidate)
+                continue
+
+            lower = stripped.lower()
+
+            if lower.startswith("description"):
+                value = parse_value(stripped) or ""
+                current.description = value
+            elif lower.startswith("physical address"):
+                value = parse_value(stripped) or ""
+                current.mac_address = value
+            elif lower.startswith("dhcp enabled"):
+                value = parse_value(stripped) or ""
+                parsed = normalize_bool(value)
+                if parsed is not None:
+                    current.dhcp_enabled = parsed
+            elif lower.startswith("media state"):
+                value = parse_value(stripped) or ""
+                if "disconnected" in value.lower():
+                    current.status = AdapterStatus.DOWN
+                else:
+                    current.status = AdapterStatus.UP
+            elif lower.startswith("ipv4 address"):
+                value = parse_value(stripped) or ""
+                # Usually: "192.168.1.10(Preferred)"
+                current.ipv4_address = value.split("(")[0].strip()
+            elif lower.startswith("subnet mask"):
+                value = parse_value(stripped) or ""
+                current.ipv4_subnet = value
+            elif lower.startswith("default gateway"):
+                value = parse_value(stripped) or ""
+                # Sometimes gateway is blank, or appears on following indented line.
+                if value:
+                    current.ipv4_gateway = value
+            elif lower.startswith("dns servers"):
+                value = parse_value(stripped) or ""
+                pending_dns = []
+                in_dns_block = True
+                if value:
+                    pending_dns.append(value)
+
+        flush_current()
         return adapters
     
     def configure_dns(self, adapter_name: str, dns_config: DNSConfiguration) -> bool:
@@ -152,7 +261,6 @@ class NetworkManager(SystemTool):
             _LOGGER.info("[DRY RUN] Would configure DNS to %s", dns_config.primary)
             return True
         
-        import platform
         if platform.system() != "Windows":
             _LOGGER.error("DNS configuration only supported on Windows")
             return False
@@ -194,7 +302,6 @@ class NetworkManager(SystemTool):
             _LOGGER.info("[DRY RUN] Would flush DNS cache")
             return True
         
-        import platform
         if platform.system() != "Windows":
             _LOGGER.error("DNS flush only supported on Windows")
             return False
@@ -226,7 +333,6 @@ class NetworkManager(SystemTool):
             _LOGGER.info("[DRY RUN] Would reset TCP/IP stack")
             return True
         
-        import platform
         if platform.system() != "Windows":
             _LOGGER.error("TCP/IP reset only supported on Windows")
             return False
@@ -259,7 +365,6 @@ class NetworkManager(SystemTool):
             _LOGGER.info("[DRY RUN] Would reset Winsock")
             return True
         
-        import platform
         if platform.system() != "Windows":
             _LOGGER.error("Winsock reset only supported on Windows")
             return False
@@ -292,8 +397,6 @@ class NetworkManager(SystemTool):
             True if host is reachable
         """
         _LOGGER.info("Testing connectivity to %s", host)
-        
-        import platform
         
         # Build ping command based on platform
         if platform.system() == "Windows":
