@@ -109,3 +109,120 @@ def make_installer(tmp_path: Path) -> Callable[[str, bytes | str], Path]:
         return path
 
     return _make
+
+
+# Fixtures for new modules
+
+@pytest.fixture
+def mock_wim_file(tmp_path):
+    """Create a mock WIM file for testing"""
+    wim_path = tmp_path / "test.wim"
+    wim_path.touch()
+    return str(wim_path)
+
+
+@pytest.fixture
+def mock_iso_file(tmp_path):
+    """Create a mock ISO file for testing"""
+    iso_path = tmp_path / "test.iso"
+    iso_path.touch()
+    return str(iso_path)
+
+
+@pytest.fixture
+def mock_driver_dir(tmp_path):
+    """Create a mock driver directory structure"""
+    driver_dir = tmp_path / "drivers"
+    driver_dir.mkdir()
+
+    # Create mock INF files
+    inf_content = """[Version]
+Signature="$WINDOWS NT$"
+Class=Display
+ClassGUID={4d36e968-e325-11ce-bfc1-08002be10318}
+Provider=TestProvider
+DriverVer=01/01/2024,1.0.0.0
+"""
+
+    for i in range(3):
+        inf_path = driver_dir / f"driver{i}.inf"
+        inf_path.write_text(inf_content)
+
+    return str(driver_dir)
+
+
+@pytest.fixture
+def mock_subprocess_success(monkeypatch):
+    """Mock subprocess.run to return success"""
+    import subprocess
+    from unittest.mock import Mock
+
+    def mock_run(*args, **kwargs):
+        result = Mock()
+        result.returncode = 0
+        result.stdout = ""
+        result.stderr = ""
+        return result
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+
+@pytest.fixture
+def sample_packages():
+    """Sample package data for testing"""
+    return [
+        {
+            "name": "TestPackage1",
+            "package_id": "test.package1",
+            "version": "1.0.0",
+            "manager": "winget",
+            "description": "Test package 1"
+        },
+        {
+            "name": "TestPackage2",
+            "package_id": "test.package2",
+            "version": "2.0.0",
+            "manager": "chocolatey",
+            "description": "Test package 2"
+        }
+    ]
+
+
+@pytest.fixture
+def sample_drivers():
+    """Sample driver data for testing"""
+    return [
+        {
+            "class_name": "Display",
+            "device_name": "Test GPU",
+            "driver_provider": "TestVendor",
+            "driver_version": "1.0.0.0",
+            "driver_date": "2024-01-01",
+            "inf_name": "testgpu.inf"
+        },
+        {
+            "class_name": "Net",
+            "device_name": "Test Network Adapter",
+            "driver_provider": "TestVendor",
+            "driver_version": "2.0.0.0",
+            "driver_date": "2024-01-01",
+            "inf_name": "testnet.inf"
+        }
+    ]
+
+
+# Test markers
+def pytest_configure(config):
+    """Register custom markers"""
+    config.addinivalue_line(
+        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+    )
+    config.addinivalue_line(
+        "markers", "integration: marks tests as integration tests"
+    )
+    config.addinivalue_line(
+        "markers", "windows_only: marks tests that only run on Windows"
+    )
+    config.addinivalue_line(
+        "markers", "requires_admin: marks tests that require admin privileges"
+    )
