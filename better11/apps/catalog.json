@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-12-19",
+  "applications": [
+    {
+      "app_id": "demo-exe",
+      "name": "Demo EXE Application",
+      "version": "1.0.0",
+      "uri": "samples/demo-app.exe",
+      "sha256": "d7a4c8bcf624d7b48e32db8dfbb29422a2fc99e2ec8926ae8810d1816995f75f",
+      "installer_type": "exe",
+      "vetted_domains": [],
+      "dependencies": [],
+      "silent_args": ["/silent"],
+      "uninstall_command": "echo uninstalling demo-exe"
+    },
+    {
+      "app_id": "demo-msi",
+      "name": "Demo MSI Application",
+      "version": "1.0.0",
+      "uri": "samples/demo-app.exe",
+      "sha256": "d7a4c8bcf624d7b48e32db8dfbb29422a2fc99e2ec8926ae8810d1816995f75f",
+      "installer_type": "msi",
+      "vetted_domains": [],
+      "dependencies": ["demo-exe"],
+      "silent_args": []
+    },
+    {
+      "app_id": "demo-appx",
+      "name": "Demo APPX Application",
+      "version": "1.0.0",
+      "uri": "samples/demo-app.exe",
+      "sha256": "d7a4c8bcf624d7b48e32db8dfbb29422a2fc99e2ec8926ae8810d1816995f75f",
+      "installer_type": "appx",
+      "vetted_domains": [],
+      "dependencies": ["demo-msi"],
+      "silent_args": []
+    }
+  ]
+}

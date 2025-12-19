@@ -28,6 +28,48 @@ This document dives into the data structures, algorithms, and user experience ex
 - New CLI command: `python -m better11.cli plan <app_id>`
   - Prints a table with columns `ACTION`, `APP ID`, `VERSION`, `STATUS`, `NOTES`.
   - Lists warnings after the table if present.
+
+### Sample CLI Output
+
+Basic plan for an application with dependencies:
+
+```bash
+$ python -m better11.cli plan visual-studio-code
+ACTION    APP ID              VERSION    STATUS       NOTES
+------    ----------------    -------    ----------   -----
+SKIP      dotnet-runtime      6.0.0      installed
+INSTALL   vs-code-deps        1.2.0      pending
+INSTALL   visual-studio-code  1.85.0     pending
+```
+
+Plan with warnings (circular dependency):
+
+```bash
+$ python -m better11.cli plan app-with-cycle
+ACTION    APP ID         VERSION    STATUS     NOTES
+------    ----------     -------    --------   --------------------------
+BLOCKED   dep-a          1.0.0      pending    Cycle detected
+BLOCKED   dep-b          1.0.0      pending    Cycle detected
+BLOCKED   app-with-cycle 1.0.0      pending    Depends on blocked dependency: dep-a
+
+Warnings:
+- Circular dependency detected: dep-a -> dep-b -> dep-a
+```
+
+Plan with missing dependency:
+
+```bash
+$ python -m better11.cli plan app-with-missing-dep
+ACTION    APP ID              VERSION    STATUS     NOTES
+------    -----------------   -------    --------   ------------------------
+BLOCKED   (missing)           unknown    pending    Missing from catalog
+BLOCKED   app-with-missing-dep 1.0.0     pending    Depends on blocked dependency: unknown-dep
+
+Warnings:
+- Missing catalog entry for dependency 'unknown-dep'
+```
+
+### GUI Integration
 - GUI footer update: after an install finishes, the footer mentions which plan step completed (e.g., `Installed demo-appx (included demo-msi, demo-exe)`). GUI does not expose the full table but shows the aggregated sequence.
 
 ## Verified Download Cache
@@ -44,7 +86,77 @@ This document dives into the data structures, algorithms, and user experience ex
   - unaffected, but ensure download cache changes do not break existing semantics.
 - Additional CLI test verifying `plan` command output is non-empty for known app IDs (use `capsys`).
 
+## Programmatic Usage
+
+```python
+from pathlib import Path
+from better11.apps.manager import AppManager
+
+# Initialize manager
+catalog_path = Path("better11/apps/catalog.json")
+manager = AppManager(catalog_path)
+
+# Build plan
+plan = manager.build_install_plan("my-app")
+
+# Check for issues
+if plan.warnings:
+    for warning in plan.warnings:
+        print(f"Warning: {warning}")
+
+# Inspect steps
+for step in plan.steps:
+    print(f"{step.action}: {step.app_id} v{step.version}")
+    if step.notes:
+        print(f"  Note: {step.notes}")
+
+# Check if installation would succeed
+blocked = any(step.action == "blocked" for step in plan.steps)
+if blocked:
+    print("Installation cannot proceed due to blocked dependencies")
+```
+
+## Security Considerations
+
+### Hash Verification
+All cached installers undergo SHA-256 hash verification before reuse. This ensures:
+- **Integrity**: The file hasn't been corrupted
+- **Authenticity**: The file matches the catalog specification
+- **Protection**: Prevents using tampered or modified installers
+
+### No State Mutation
+The planning operation is read-only and never:
+- Downloads files
+- Modifies the installation state
+- Executes installers
+- Changes system configuration
+
+This makes `plan` safe to execute at any time without side effects.
+
 ## Operational Guidance
 - Keep `plan.md` updated when expanding the planning or caching behavior.
 - Encourage users to run `plan` before `install` on production systems.
 - Cached installers should be periodically cleaned via existing OS tooling when disk space is scarce (`~/.better11/downloads`).
+
+## Benefits
+
+### 1. Transparency
+Operators can see exactly what will be installed before committing to the operation.
+
+### 2. Resource Planning
+Understanding the full dependency tree helps with:
+- Estimating disk space requirements
+- Planning network bandwidth usage
+- Scheduling maintenance windows
+
+### 3. Troubleshooting
+Clear diagnostic messages for:
+- Circular dependencies with exact paths
+- Missing catalog entries
+- Version conflicts
+
+### 4. Efficiency
+Download cache reuse eliminates redundant network transfers, particularly useful when:
+- Re-installing applications
+- Installing multiple apps with shared dependencies
+- Testing installation procedures
