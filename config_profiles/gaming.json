@@ -1,0 +1,46 @@
+{
+  "version": "0.3.0",
+  "image": {
+    "work_dir": "",
+    "mount_dir": "",
+    "default_index": 1,
+    "auto_optimize": true,
+    "compression": "max"
+  },
+  "updates": {
+    "auto_check": true,
+    "auto_download": false,
+    "auto_install": false,
+    "pause_days": 7,
+    "include_drivers": false
+  },
+  "drivers": {
+    "backup_dir": "",
+    "auto_backup": true,
+    "include_inbox": false,
+    "force_unsigned": false
+  },
+  "packages": {
+    "cache_dir": "",
+    "preferred_manager": "winget",
+    "auto_update": false,
+    "verify_signatures": true
+  },
+  "optimizer": {
+    "default_level": "gaming",
+    "auto_backup_registry": true,
+    "create_restore_point": true,
+    "disable_telemetry": true
+  },
+  "files": {
+    "buffer_size": 2097152,
+    "use_robocopy": true,
+    "secure_delete": false
+  },
+  "ui": {
+    "theme": "default",
+    "verbose": true,
+    "show_progress": true,
+    "confirm_destructive": true
+  }
+}
