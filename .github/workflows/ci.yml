@@ -36,14 +36,38 @@ jobs:
     - name: Build solution
       run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release --no-restore
 
-    - name: Run unit tests
-      run: dotnet test ${{ env.SOLUTION_FILE }} --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+    - name: Run unit tests with coverage
+      run: dotnet test ${{ env.SOLUTION_FILE }} --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory ./coverage
 
     - name: Publish test results
       uses: EnricoMi/publish-unit-test-result-action/composite@v2
       if: always()
       with:
         files: '**/test-results.trx'
+
+    - name: Generate coverage report
+      if: success()
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.0
+      with:
+        reports: 'coverage/**/coverage.cobertura.xml'
+        targetdir: 'coverage-report'
+        reporttypes: 'Html;MarkdownSummaryGithub'
+
+    - name: Upload coverage to GitHub Summary
+      if: success()
+      run: |
+        if [ -f coverage-report/SummaryGithub.md ]; then
+          cat coverage-report/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+        fi
+      shell: bash
+
+    - name: Upload coverage report
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-${{ github.sha }}
+        path: coverage-report/
+        retention-days: 30
 
     - name: Upload build artifacts
       if: success()

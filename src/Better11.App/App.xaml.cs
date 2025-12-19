@@ -1,4 +1,5 @@
 using Better11.App.Helpers;
+using Better11.App.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
@@ -30,7 +31,24 @@ public partial class App : Application
             })
             .Build();
 
+        // Register global exception handler
+        UnhandledException += OnUnhandledException;
+
         Log.Information("Better11 application initialized");
+    }
+
+    /// <summary>
+    /// Handle unhandled exceptions.
+    /// </summary>
+    private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    {
+        var errorHandler = _host.Services.GetRequiredService<IErrorHandlingService>();
+        errorHandler.HandleException(e.Exception, "Global");
+
+        // Mark as handled to prevent crash (use with caution in production)
+        e.Handled = true;
+
+        Log.Error(e.Exception, "Unhandled exception occurred");
     }
 
     /// <summary>

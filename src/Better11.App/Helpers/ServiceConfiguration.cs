@@ -42,18 +42,23 @@ public static class ServiceConfiguration
             navService.RegisterPage("Settings", typeof(Views.SettingsView));
             navService.RegisterPage("ImageEditor", typeof(Views.ImageEditorView));
             navService.RegisterPage("AppManager", typeof(Views.AppManagerView));
+            navService.RegisterPage("FileOperations", typeof(Views.FileOperationsView));
+            navService.RegisterPage("SystemTools", typeof(Views.SystemToolsView));
             // Add more page registrations as views are created
 
             return navService;
         });
 
         services.AddSingleton<IDialogService, DialogService>();
+        services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
 
         // Register ViewModels
         services.AddTransient<DashboardViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ImageEditorViewModel>();
         services.AddTransient<AppManagerViewModel>();
+        services.AddTransient<FileOperationsViewModel>();
+        services.AddTransient<SystemToolsViewModel>();
 
         // Register main window
         services.AddSingleton<MainWindow>();
