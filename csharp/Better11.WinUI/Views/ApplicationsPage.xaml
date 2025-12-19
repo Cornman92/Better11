@@ -119,16 +119,24 @@
 
                                 <!-- Actions -->
                                 <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
-                                    <Button 
+                                    <Button
+                                        Content="Plan"
+                                        Command="{Binding PlanCommand}"
+                                        Visibility="{Binding IsNotInstalled}">
+                                        <Button.Icon>
+                                            <FontIcon Glyph="&#xE81E;"/>
+                                        </Button.Icon>
+                                    </Button>
+                                    <Button
                                         Content="Install"
                                         Command="{Binding InstallCommand}"
                                         Style="{StaticResource AccentButtonStyle}"
                                         Visibility="{Binding IsNotInstalled}"/>
-                                    <Button 
+                                    <Button
                                         Content="Uninstall"
                                         Command="{Binding UninstallCommand}"
                                         Visibility="{Binding IsInstalled}"/>
-                                    <Button 
+                                    <Button
                                         Content="Update"
                                         Command="{Binding UpdateCommand}"
                                         Visibility="{Binding HasUpdate}"/>

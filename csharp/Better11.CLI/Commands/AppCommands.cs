@@ -24,6 +24,7 @@ namespace Better11.CLI.Commands
             command.AddCommand(BuildInstallCommand());
             command.AddCommand(BuildUninstallCommand());
             command.AddCommand(BuildStatusCommand());
+            command.AddCommand(BuildPlanCommand());
 
             return command;
         }
@@ -238,6 +239,96 @@ namespace Better11.CLI.Commands
                 catch (Exception ex)
                 {
                     AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
+                    context.ExitCode = 1;
+                }
+            });
+
+            return command;
+        }
+
+        private static Command BuildPlanCommand()
+        {
+            var appIdArg = new Argument<string>("app-id", "Application ID to plan for");
+            var command = new Command("plan", "Show the installation plan for an application");
+            command.AddArgument(appIdArg);
+
+            command.SetHandler(async (InvocationContext context) =>
+            {
+                var appId = context.ParseResult.GetValueForArgument(appIdArg);
+                var host = context.GetHost();
+                var appService = host.Services.GetRequiredService<IAppService>();
+
+                try
+                {
+                    var plan = await appService.GetInstallPlanAsync(appId);
+
+                    if (plan.Steps.Count == 0)
+                    {
+                        AnsiConsole.MarkupLine("[dim]No plan steps found[/]");
+                        return;
+                    }
+
+                    // Display table
+                    var table = new Table();
+                    table.AddColumn("Action");
+                    table.AddColumn("App ID");
+                    table.AddColumn("Version");
+                    table.AddColumn("Status");
+                    table.AddColumn("Notes");
+
+                    foreach (var step in plan.Steps)
+                    {
+                        var actionColor = step.Action switch
+                        {
+                            "install" => "blue",
+                            "skip" => "green",
+                            "blocked" => "red",
+                            _ => "white"
+                        };
+                        var actionText = $"[{actionColor}]{step.Action.ToUpper()}[/]";
+                        var statusText = step.Installed ? "[green]installed[/]" : "[dim]pending[/]";
+                        var notes = string.IsNullOrEmpty(step.Notes) ? "-" : $"[yellow]{step.Notes}[/]";
+
+                        table.AddRow(
+                            actionText,
+                            step.AppId,
+                            step.Version,
+                            statusText,
+                            notes);
+                    }
+
+                    AnsiConsole.Write(table);
+
+                    // Display warnings
+                    if (plan.Warnings.Count > 0)
+                    {
+                        AnsiConsole.WriteLine();
+                        AnsiConsole.MarkupLine("[yellow]Warnings:[/]");
+                        foreach (var warning in plan.Warnings)
+                        {
+                            AnsiConsole.MarkupLine($"  [yellow]-[/] {warning}");
+                        }
+                    }
+
+                    // Display summary
+                    AnsiConsole.WriteLine();
+                    var installCount = plan.InstallCount();
+                    var skipCount = plan.SkipCount();
+                    var hasBlocked = plan.HasBlockedSteps();
+
+                    if (hasBlocked)
+                    {
+                        AnsiConsole.MarkupLine("[red]Installation cannot proceed due to blocked dependencies[/]");
+                        context.ExitCode = 1;
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine($"[dim]Plan: {installCount} to install, {skipCount} to skip[/]");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AnsiConsole.MarkupLine($"[red]Planning failed:[/] {ex.Message}");
                     context.ExitCode = 1;
                 }
             });

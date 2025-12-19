@@ -160,6 +160,162 @@ public class AppManager
         }
         return messages;
     }
+
+    /// <summary>
+    /// Build an installation plan without mutating state.
+    /// </summary>
+    /// <param name="appId">Target application to plan for</param>
+    /// <returns>Installation plan summary with dependency ordering and warnings</returns>
+    public InstallPlanSummary BuildInstallPlan(string appId)
+    {
+        var summary = new InstallPlanSummary { TargetAppId = appId };
+        var visited = new HashSet<string>();
+        var visitingStack = new List<string>();
+        var visitingSet = new HashSet<string>();
+        var blockedReasons = new Dictionary<string, List<string>>();
+
+        void AddBlockReason(string target, string reason)
+        {
+            if (!blockedReasons.ContainsKey(target))
+            {
+                blockedReasons[target] = new List<string>();
+            }
+            if (!blockedReasons[target].Contains(reason))
+            {
+                blockedReasons[target].Add(reason);
+            }
+        }
+
+        void AddWarning(string message)
+        {
+            if (!summary.Warnings.Contains(message))
+            {
+                summary.Warnings.Add(message);
+            }
+        }
+
+        void Dfs(string currentId)
+        {
+            if (visited.Contains(currentId))
+            {
+                return;
+            }
+
+            if (visitingSet.Contains(currentId))
+            {
+                // Circular dependency detected
+                var cycleStart = visitingStack.IndexOf(currentId);
+                var cycle = visitingStack.Skip(cycleStart).Append(currentId).ToList();
+                AddWarning($"Circular dependency detected: {string.Join(" -> ", cycle)}");
+                foreach (var node in cycle)
+                {
+                    AddBlockReason(node, "Cycle detected");
+                }
+                return;
+            }
+
+            AppMetadata? app;
+            try
+            {
+                app = _catalog.Get(currentId);
+            }
+            catch (KeyNotFoundException)
+            {
+                AddWarning($"Missing catalog entry for dependency '{currentId}'");
+                AddBlockReason(currentId, "Missing from catalog");
+                summary.Steps.Add(new InstallPlanStep
+                {
+                    AppId = currentId,
+                    Name = "(missing)",
+                    Version = "unknown",
+                    Dependencies = new List<string>(),
+                    Installed = false,
+                    Action = "blocked",
+                    Notes = "Missing from catalog"
+                });
+                visited.Add(currentId);
+                return;
+            }
+
+            visitingStack.Add(currentId);
+            visitingSet.Add(currentId);
+
+            foreach (var dependencyId in app.Dependencies)
+            {
+                Dfs(dependencyId);
+                if (blockedReasons.ContainsKey(dependencyId))
+                {
+                    AddBlockReason(app.AppId, $"Depends on blocked dependency: {dependencyId}");
+                }
+            }
+
+            visitingStack.RemoveAt(visitingStack.Count - 1);
+            visitingSet.Remove(currentId);
+
+            var status = _stateStore.Get(app.AppId);
+            var isInstalled = status != null && status.Installed && status.Version == app.Version;
+            var action = isInstalled ? "skip" : "install";
+            if (blockedReasons.ContainsKey(app.AppId))
+            {
+                action = "blocked";
+            }
+
+            var notes = blockedReasons.ContainsKey(app.AppId)
+                ? string.Join("; ", blockedReasons[app.AppId])
+                : string.Empty;
+
+            summary.Steps.Add(new InstallPlanStep
+            {
+                AppId = app.AppId,
+                Name = app.Name,
+                Version = app.Version,
+                Dependencies = new List<string>(app.Dependencies),
+                Installed = isInstalled,
+                Action = action,
+                Notes = notes
+            });
+
+            visited.Add(currentId);
+        }
+
+        Dfs(appId);
+        return summary;
+    }
+
+    /// <summary>
+    /// Download an application installer with cache support.
+    /// </summary>
+    /// <param name="appId">Application to download</param>
+    /// <returns>Tuple of (path, cacheHit)</returns>
+    public async Task<(string Path, bool CacheHit)> DownloadWithCacheAsync(string appId)
+    {
+        var app = _catalog.Get(appId);
+        var destination = _downloader.DestinationFor(app);
+        var cacheHit = false;
+
+        if (File.Exists(destination))
+        {
+            try
+            {
+                await _verifier.VerifyHashAsync(destination, app.Sha256);
+                _logger?.LogInformation("Using cached installer for {AppId} at {Path}", app.AppId, destination);
+                cacheHit = true;
+            }
+            catch (VerificationException)
+            {
+                _logger?.LogWarning("Cached installer for {AppId} failed verification; redownloading", app.AppId);
+                File.Delete(destination);
+            }
+        }
+
+        if (!cacheHit)
+        {
+            _logger?.LogInformation("Downloading {Name} from {Uri}", app.Name, app.Uri);
+            await _downloader.DownloadAsync(app);
+        }
+
+        return (destination, cacheHit);
+    }
 }
 
 /// <summary>
