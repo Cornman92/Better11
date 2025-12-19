@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Better11.Core.Apps.Models;
 using Better11.Core.Models;
 
 namespace Better11.Core.Interfaces
@@ -58,5 +59,12 @@ namespace Better11.Core.Interfaces
         /// <param name="installerPath">Path to installer file.</param>
         /// <returns>True if verification passes.</returns>
         Task<bool> VerifyInstallerAsync(string appId, string installerPath);
+
+        /// <summary>
+        /// Builds an installation plan for an application without mutating state.
+        /// </summary>
+        /// <param name="appId">Application identifier.</param>
+        /// <returns>Installation plan summary with dependency ordering and warnings.</returns>
+        Task<InstallPlanSummary> GetInstallPlanAsync(string appId);
     }
 }

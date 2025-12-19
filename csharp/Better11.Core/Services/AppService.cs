@@ -6,6 +6,8 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Better11.Core.Apps;
+using Better11.Core.Apps.Models;
 using Better11.Core.Interfaces;
 using Better11.Core.Models;
 using Better11.Core.PowerShell;
@@ -362,6 +364,19 @@ namespace Better11.Core.Services
             });
 
             await File.WriteAllTextAsync(_stateFile, json);
+        }
+
+        /// <inheritdoc/>
+        public async Task<InstallPlanSummary> GetInstallPlanAsync(string appId)
+        {
+            // Use the C# AppManager for planning
+            var manager = new AppManager(
+                _catalogPath,
+                _downloadDir,
+                _stateFile,
+                logger: _logger);
+
+            return await Task.Run(() => manager.BuildInstallPlan(appId));
         }
     }
 }
