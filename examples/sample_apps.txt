@@ -1,0 +1,95 @@
+# Better11 Sample App List
+# Format: Name, Package ID, Manager
+#
+# Use with: python examples/bulk_app_installation.py --custom sample_apps.txt
+#
+# Available managers: winget, choco, npm, pip
+
+# ===== Web Browsers =====
+Google Chrome, Google.Chrome, winget
+Mozilla Firefox, Mozilla.Firefox, winget
+Microsoft Edge, Microsoft.Edge, winget
+Brave Browser, Brave.Brave, winget
+
+# ===== Communication =====
+Discord, Discord.Discord, winget
+Slack, SlackTechnologies.Slack, winget
+Zoom, Zoom.Zoom, winget
+Microsoft Teams, Microsoft.Teams, winget
+Telegram, Telegram.TelegramDesktop, winget
+
+# ===== Development Tools =====
+Visual Studio Code, Microsoft.VisualStudioCode, winget
+Git, Git.Git, winget
+Node.js, OpenJS.NodeJS.LTS, winget
+Python 3.12, Python.Python.3.12, winget
+Docker Desktop, Docker.DockerDesktop, winget
+Postman, Postman.Postman, winget
+GitHub Desktop, GitHub.GitHubDesktop, winget
+Windows Terminal, Microsoft.WindowsTerminal, winget
+
+# ===== Utilities =====
+7-Zip, 7zip.7zip, winget
+Notepad++, Notepad++.Notepad++, winget
+PowerToys, Microsoft.PowerToys, winget
+Everything Search, voidtools.Everything, winget
+WinRAR, RARLab.WinRAR, winget
+TreeSize Free, JAM-Software.TreeSize.Free, winget
+
+# ===== Media =====
+VLC Media Player, VideoLAN.VLC, winget
+Spotify, Spotify.Spotify, winget
+Audacity, Audacity.Audacity, winget
+OBS Studio, OBSProject.OBSStudio, winget
+HandBrake, HandBrake.HandBrake, winget
+K-Lite Codec Pack, CodecGuide.K-LiteCodecPack.Standard, winget
+
+# ===== Gaming =====
+Steam, Valve.Steam, winget
+Epic Games Launcher, EpicGames.EpicGamesLauncher, winget
+GOG Galaxy, GOG.Galaxy, winget
+EA App, ElectronicArts.EADesktop, winget
+MSI Afterburner, Guru3D.Afterburner, winget
+
+# ===== Productivity =====
+LibreOffice, TheDocumentFoundation.LibreOffice, winget
+Notion, Notion.Notion, winget
+Obsidian, Obsidian.Obsidian, winget
+Adobe Acrobat Reader, Adobe.Acrobat.Reader.64-bit, winget
+Sumatra PDF, SumatraPDF.SumatraPDF, winget
+
+# ===== Cloud Storage =====
+Dropbox, Dropbox.Dropbox, winget
+Google Drive, Google.GoogleDrive, winget
+OneDrive, Microsoft.OneDrive, winget
+
+# ===== Graphics =====
+GIMP, GIMP.GIMP, winget
+Inkscape, Inkscape.Inkscape, winget
+Paint.NET, dotPDN.PaintDotNet, winget
+Blender, BlenderFoundation.Blender, winget
+
+# ===== Security =====
+Malwarebytes, Malwarebytes.Malwarebytes, winget
+Bitwarden, Bitwarden.Bitwarden, winget
+KeePassXC, KeePassXCTeam.KeePassXC, winget
+
+# ===== System Tools =====
+CPU-Z, CPUID.CPU-Z, winget
+GPU-Z, TechPowerUp.GPU-Z, winget
+HWiNFO, REALiX.HWiNFO, winget
+CrystalDiskInfo, CrystalDewWorld.CrystalDiskInfo, winget
+Revo Uninstaller, RevoUninstaller.RevoUninstaller, winget
+
+# ===== NPM Packages (requires Node.js) =====
+# TypeScript, typescript, npm
+# Angular CLI, @angular/cli, npm
+# React, create-react-app, npm
+# Vue CLI, @vue/cli, npm
+
+# ===== Python Packages (requires Python) =====
+# NumPy, numpy, pip
+# Pandas, pandas, pip
+# Requests, requests, pip
+# Flask, flask, pip
+# Django, django, pip

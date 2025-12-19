@@ -1,0 +1,141 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop, claude/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 better11/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 better11/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Run tests with pytest
+      run: |
+        pytest tests/ -v --tb=short --junit-xml=test-results-${{ matrix.python-version }}.xml
+
+    - name: Run tests with coverage
+      if: matrix.python-version == '3.11'
+      run: |
+        pytest tests/ --cov=better11 --cov-report=xml --cov-report=html --cov-report=term
+
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: test-results-${{ matrix.python-version }}.xml
+
+    - name: Upload coverage HTML
+      uses: actions/upload-artifact@v3
+      if: matrix.python-version == '3.11' && always()
+      with:
+        name: coverage-report
+        path: htmlcov/
+
+  lint:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black isort mypy
+
+    - name: Check code formatting with black
+      run: |
+        black --check better11/ tests/
+
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only better11/ tests/
+
+    - name: Type checking with mypy
+      run: |
+        mypy better11/ --ignore-missing-imports
+      continue-on-error: true
+
+  integration:
+    runs-on: windows-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run integration tests
+      run: |
+        pytest tests/ -v -m integration --tb=short
+      continue-on-error: true
+
+    - name: Check DISM availability
+      run: |
+        dism /?
+      continue-on-error: true
+
+    - name: Test module imports
+      run: |
+        python -c "from better11 import image_manager, iso_manager, update_manager"
+        python -c "from better11 import driver_manager, package_manager, system_optimizer"
+        python -c "from better11 import file_manager, config_manager"
+        echo "All modules imported successfully"
