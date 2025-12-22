@@ -577,6 +577,173 @@ public class AppManager
         result.EndTime = DateTime.Now;
         return result;
     }
+
+    /// <summary>
+    /// Exports currently installed apps to a configuration file.
+    /// </summary>
+    /// <param name="filePath">Path where to save the configuration.</param>
+    /// <param name="name">Name for this configuration.</param>
+    /// <param name="description">Optional description.</param>
+    public void ExportConfiguration(string filePath, string name, string? description = null)
+    {
+        ValidationHelper.ValidatePath(filePath, nameof(filePath));
+
+        var installedApps = _stateStore.List();
+        var config = AppConfiguration.FromInstalledApps(installedApps, name, description);
+
+        var validationErrors = config.Validate();
+        if (validationErrors.Any())
+        {
+            throw new InvalidOperationException(
+                $"Configuration validation failed: {string.Join("; ", validationErrors)}");
+        }
+
+        config.SaveToFile(filePath);
+        _logger?.LogInformation("Exported configuration '{Name}' with {Count} apps to {Path}",
+            name, config.Applications.Count, filePath);
+    }
+
+    /// <summary>
+    /// Imports and installs apps from a configuration file.
+    /// </summary>
+    /// <param name="filePath">Path to the configuration file.</param>
+    /// <param name="progress">Optional progress reporter.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="skipInstalled">If true, skip apps that are already installed.</param>
+    /// <returns>Batch operation result.</returns>
+    public async Task<BatchOperationResult> ImportConfigurationAsync(
+        string filePath,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken cancellationToken = default,
+        bool skipInstalled = true)
+    {
+        ValidationHelper.ValidatePath(filePath, nameof(filePath), mustExist: true);
+
+        var config = AppConfiguration.LoadFromFile(filePath);
+
+        var validationErrors = config.Validate();
+        if (validationErrors.Any())
+        {
+            throw new InvalidOperationException(
+                $"Configuration validation failed: {string.Join("; ", validationErrors)}");
+        }
+
+        _logger?.LogInformation("Importing configuration '{Name}' with {Count} apps from {Path}",
+            config.Name, config.Applications.Count, filePath);
+
+        var appsToInstall = config.Applications;
+
+        if (skipInstalled)
+        {
+            var installed = _stateStore.List()
+                .Where(s => s.Installed)
+                .Select(s => s.AppId)
+                .ToHashSet();
+
+            appsToInstall = config.Applications
+                .Where(appId => !installed.Contains(appId))
+                .ToList();
+
+            _logger?.LogInformation("Skipping {Count} already installed apps",
+                config.Applications.Count - appsToInstall.Count);
+        }
+
+        if (appsToInstall.Count == 0)
+        {
+            var result = new BatchOperationResult { EndTime = DateTime.Now };
+            progress?.Report(new OperationProgress
+            {
+                AppId = config.Name,
+                Stage = OperationStage.Completed,
+                PercentComplete = 100,
+                Message = "All apps already installed",
+                IsComplete = true
+            });
+            return result;
+        }
+
+        return await BatchInstallAsync(appsToInstall, progress, cancellationToken, continueOnError: true);
+    }
+
+    /// <summary>
+    /// Gets a preview of what would be installed from a configuration file.
+    /// </summary>
+    /// <param name="filePath">Path to the configuration file.</param>
+    /// <returns>Configuration preview with app details.</returns>
+    public ConfigurationPreview PreviewConfiguration(string filePath)
+    {
+        ValidationHelper.ValidatePath(filePath, nameof(filePath), mustExist: true);
+
+        var config = AppConfiguration.LoadFromFile(filePath);
+        var validationErrors = config.Validate();
+
+        var preview = new ConfigurationPreview
+        {
+            Configuration = config,
+            ValidationErrors = validationErrors
+        };
+
+        var installedApps = _stateStore.List()
+            .Where(s => s.Installed)
+            .Select(s => s.AppId)
+            .ToHashSet();
+
+        foreach (var appId in config.Applications)
+        {
+            try
+            {
+                var app = _cachedCatalog.Get(appId);
+                preview.AppDetails.Add(new ConfigurationAppDetail
+                {
+                    AppId = appId,
+                    Name = app.Name,
+                    Version = app.Version,
+                    IsInstalled = installedApps.Contains(appId),
+                    Exists = true
+                });
+            }
+            catch (KeyNotFoundException)
+            {
+                preview.AppDetails.Add(new ConfigurationAppDetail
+                {
+                    AppId = appId,
+                    Name = $"(Unknown: {appId})",
+                    Version = "N/A",
+                    IsInstalled = false,
+                    Exists = false
+                });
+                preview.ValidationErrors.Add($"Application '{appId}' not found in catalog");
+            }
+        }
+
+        return preview;
+    }
+}
+
+/// <summary>
+/// Preview of a configuration before importing.
+/// </summary>
+public class ConfigurationPreview
+{
+    public required AppConfiguration Configuration { get; init; }
+    public List<ConfigurationAppDetail> AppDetails { get; init; } = new();
+    public List<string> ValidationErrors { get; init; } = new();
+    public bool IsValid => !ValidationErrors.Any();
+    public int ToInstallCount => AppDetails.Count(d => d.Exists && !d.IsInstalled);
+    public int AlreadyInstalledCount => AppDetails.Count(d => d.IsInstalled);
+    public int MissingCount => AppDetails.Count(d => !d.Exists);
+}
+
+/// <summary>
+/// Details about an app in a configuration.
+/// </summary>
+public class ConfigurationAppDetail
+{
+    public required string AppId { get; init; }
+    public required string Name { get; init; }
+    public required string Version { get; init; }
+    public bool IsInstalled { get; init; }
+    public bool Exists { get; init; }
 }
 
 /// <summary>
