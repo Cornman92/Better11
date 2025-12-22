@@ -10,7 +10,7 @@ namespace Better11.Core.Apps;
 /// </summary>
 public class AppManager
 {
-    private readonly AppCatalog _catalog;
+    private readonly CachedAppCatalog _cachedCatalog;
     private readonly AppDownloader _downloader;
     private readonly DownloadVerifier _verifier;
     private readonly InstallerRunner _runner;
@@ -24,9 +24,10 @@ public class AppManager
         AppDownloader? downloader = null,
         DownloadVerifier? verifier = null,
         InstallerRunner? runner = null,
-        ILogger<AppManager>? logger = null)
+        ILogger<AppManager>? logger = null,
+        TimeSpan? cacheExpiration = null)
     {
-        _catalog = AppCatalog.FromFile(catalogPath);
+        _cachedCatalog = new CachedAppCatalog(catalogPath, cacheExpiration);
         var catalogDir = Path.GetDirectoryName(catalogPath) ?? Directory.GetCurrentDirectory();
         downloadDir ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".better11", "downloads");
         stateFile ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".better11", "installed.json");
@@ -40,7 +41,23 @@ public class AppManager
 
     public List<AppMetadata> ListAvailable()
     {
-        return _catalog.ListAll();
+        return _cachedCatalog.ListAll();
+    }
+
+    /// <summary>
+    /// Invalidates the catalog cache, forcing a reload on next access.
+    /// </summary>
+    public void InvalidateCatalogCache()
+    {
+        _cachedCatalog.Invalidate();
+    }
+
+    /// <summary>
+    /// Gets catalog cache statistics.
+    /// </summary>
+    public CacheStatistics GetCacheStatistics()
+    {
+        return _cachedCatalog.GetStatistics();
     }
 
     public async Task<string> DownloadAsync(string appId)
@@ -88,7 +105,7 @@ public class AppManager
                 IsComplete = false
             });
 
-            var app = _catalog.Get(appId);
+            var app = _cachedCatalog.Get(appId);
             var existing = _stateStore.Get(appId);
             if (existing != null && existing.Installed && existing.Version == app.Version)
             {
@@ -215,7 +232,7 @@ public class AppManager
     private void EnsureNotRequiredByDependents(string appId)
     {
         var dependents = new List<string>();
-        foreach (var candidate in _catalog.ListAll())
+        foreach (var candidate in _cachedCatalog.ListAll())
         {
             if (candidate.Dependencies.Contains(appId))
             {
