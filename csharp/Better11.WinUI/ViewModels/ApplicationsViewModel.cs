@@ -2,14 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Better11.Core.Apps.Models;
 using Better11.Core.Interfaces;
 using Better11.Core.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 
 namespace Better11.WinUI.ViewModels
 {
@@ -95,7 +98,8 @@ namespace Better11.WinUI.ViewModels
                         HasUpdate = false, // TODO: Check for updates
                         InstallCommand = new RelayCommand(async () => await InstallAppAsync(app.AppId)),
                         UninstallCommand = new RelayCommand(async () => await UninstallAppAsync(app.AppId)),
-                        UpdateCommand = new RelayCommand(async () => await UpdateAppAsync(app.AppId))
+                        UpdateCommand = new RelayCommand(async () => await UpdateAppAsync(app.AppId)),
+                        PlanCommand = new RelayCommand(async () => await ShowPlanAsync(app.AppId))
                     });
                 }
 
@@ -207,6 +211,120 @@ namespace Better11.WinUI.ViewModels
             // Similar to InstallAppAsync but for updates
             await InstallAppAsync(appId);
         }
+
+        private async Task ShowPlanAsync(string appId)
+        {
+            try
+            {
+                _logger.LogInformation("Showing install plan for: {AppId}", appId);
+
+                IsLoading = true;
+
+                var plan = await _appManager.GetInstallPlanAsync(appId);
+
+                // Build the content for the dialog
+                var content = new StringBuilder();
+
+                // Add warnings if any
+                if (plan.Warnings.Count > 0)
+                {
+                    content.AppendLine("⚠️ Warnings:");
+                    foreach (var warning in plan.Warnings)
+                    {
+                        content.AppendLine($"  • {warning}");
+                    }
+                    content.AppendLine();
+                }
+
+                // Add installation steps
+                content.AppendLine("Installation Steps:");
+                content.AppendLine();
+
+                foreach (var step in plan.Steps)
+                {
+                    var actionSymbol = step.Action switch
+                    {
+                        "install" => "📦",
+                        "skip" => "✓",
+                        "blocked" => "❌",
+                        _ => "•"
+                    };
+
+                    content.AppendLine($"{actionSymbol} {step.Name} (v{step.Version})");
+                    content.AppendLine($"   Action: {step.Action.ToUpper()}");
+
+                    if (!string.IsNullOrEmpty(step.Notes))
+                    {
+                        content.AppendLine($"   Notes: {step.Notes}");
+                    }
+
+                    if (step.Dependencies.Count > 0)
+                    {
+                        content.AppendLine($"   Dependencies: {string.Join(", ", step.Dependencies)}");
+                    }
+
+                    content.AppendLine();
+                }
+
+                // Add summary
+                content.AppendLine("Summary:");
+                content.AppendLine($"  • To install: {plan.InstallCount()}");
+                content.AppendLine($"  • Already installed: {plan.SkipCount()}");
+
+                if (plan.HasBlockedSteps())
+                {
+                    content.AppendLine($"  • Blocked: {plan.Steps.Count(s => s.Action == "blocked")}");
+                }
+
+                // Create and show the dialog
+                var dialog = new ContentDialog
+                {
+                    Title = $"Installation Plan: {appId}",
+                    Content = new ScrollViewer
+                    {
+                        Content = new TextBlock
+                        {
+                            Text = content.ToString(),
+                            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                            IsTextSelectionEnabled = true
+                        },
+                        MaxHeight = 500
+                    },
+                    CloseButtonText = "Cancel",
+                    XamlRoot = App.GetService<MainWindow>().Content.XamlRoot
+                };
+
+                // Only add install button if plan is valid
+                if (!plan.HasBlockedSteps() && plan.InstallCount() > 0)
+                {
+                    dialog.PrimaryButtonText = "Install";
+                    dialog.PrimaryButtonClick += async (_, _) =>
+                    {
+                        await InstallAppAsync(appId);
+                    };
+                }
+
+                await dialog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to show install plan for: {AppId}", appId);
+
+                var errorDialog = new ContentDialog
+                {
+                    Title = "Error",
+                    Content = $"Failed to generate install plan: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = App.GetService<MainWindow>().Content.XamlRoot
+                };
+
+                await errorDialog.ShowAsync();
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
     }
 
     public class AppViewModel : ObservableObject
@@ -222,5 +340,6 @@ namespace Better11.WinUI.ViewModels
         public ICommand? InstallCommand { get; set; }
         public ICommand? UninstallCommand { get; set; }
         public ICommand? UpdateCommand { get; set; }
+        public ICommand? PlanCommand { get; set; }
     }
 }

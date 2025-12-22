@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
 using System.Threading.Tasks;
+using Better11.Core.Apps;
+using Better11.Core.Apps.Models;
 using Better11.Core.Interfaces;
 using Better11.Core.Models;
 using Better11.Core.PowerShell;
@@ -13,15 +15,25 @@ namespace Better11.Core.Services
     /// <summary>
     /// Service for managing application installation and updates.
     /// </summary>
-    public class AppManagerService : IAppManagerService
+    public class AppManagerService : IAppManager, IAppManagerService
     {
         private readonly PowerShellExecutor _psExecutor;
         private readonly ILogger<AppManagerService> _logger;
+        private readonly string _catalogPath;
+        private readonly string _downloadDir;
+        private readonly string _stateFile;
 
         public AppManagerService(PowerShellExecutor psExecutor, ILogger<AppManagerService> logger)
         {
             _psExecutor = psExecutor;
             _logger = logger;
+
+            // Initialize paths for AppManager
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var better11Dir = Path.Combine(userProfile, ".better11");
+            _catalogPath = Path.Combine(Directory.GetCurrentDirectory(), "catalog.json");
+            _downloadDir = Path.Combine(better11Dir, "downloads");
+            _stateFile = Path.Combine(better11Dir, "installed.json");
         }
 
         public async Task<List<AppMetadata>> ListAvailableAppsAsync()
@@ -308,6 +320,22 @@ namespace Better11.Core.Services
             }
 
             return new List<string>();
+        }
+
+        public async Task<InstallPlanSummary> GetInstallPlanAsync(string appId)
+        {
+            try
+            {
+                _logger.LogInformation("Building install plan for: {AppId}", appId);
+
+                var manager = new AppManager(_catalogPath, _downloadDir, _stateFile, logger: _logger);
+                return await Task.Run(() => manager.BuildInstallPlan(appId));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to build install plan for {AppId}", appId);
+                throw;
+            }
         }
     }
 }
