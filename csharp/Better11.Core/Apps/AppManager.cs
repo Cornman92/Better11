@@ -49,16 +49,20 @@ public class AppManager
         return await _downloader.DownloadAsync(app);
     }
 
-    public async Task<(AppStatus, InstallerResult)> InstallAsync(string appId, IProgress<OperationProgress>? progress = null)
+    public async Task<(AppStatus, InstallerResult)> InstallAsync(
+        string appId,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         var visited = new HashSet<string>();
-        return await InstallRecursiveAsync(appId, visited, progress);
+        return await InstallRecursiveAsync(appId, visited, progress, cancellationToken);
     }
 
     private async Task<(AppStatus, InstallerResult)> InstallRecursiveAsync(
         string appId,
         HashSet<string> visited,
-        IProgress<OperationProgress>? progress = null)
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         if (visited.Contains(appId))
         {
@@ -68,6 +72,8 @@ public class AppManager
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             progress?.Report(new OperationProgress
             {
                 AppId = appId,
@@ -111,9 +117,12 @@ public class AppManager
             var dependencyStatuses = new Dictionary<string, AppStatus>();
             foreach (var dependencyId in app.Dependencies)
             {
-                var (depStatus, _) = await InstallRecursiveAsync(dependencyId, visited, progress);
+                cancellationToken.ThrowIfCancellationRequested();
+                var (depStatus, _) = await InstallRecursiveAsync(dependencyId, visited, progress, cancellationToken);
                 dependencyStatuses[dependencyId] = depStatus;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             progress?.Report(new OperationProgress
             {
@@ -124,7 +133,7 @@ public class AppManager
                 IsComplete = false
             });
 
-            var installerPath = await _downloader.DownloadAsync(app, progress: progress);
+            var installerPath = await _downloader.DownloadAsync(app, progress: progress, cancellationToken: cancellationToken);
 
             progress?.Report(new OperationProgress
             {

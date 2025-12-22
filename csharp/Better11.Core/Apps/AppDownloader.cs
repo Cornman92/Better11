@@ -20,7 +20,11 @@ public class AppDownloader
         Directory.CreateDirectory(_downloadRoot);
     }
 
-    public async Task<string> DownloadAsync(AppMetadata app, string? destination = null, IProgress<OperationProgress>? progress = null)
+    public async Task<string> DownloadAsync(
+        AppMetadata app,
+        string? destination = null,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         var uri = new Uri(app.Uri, UriKind.RelativeOrAbsolute);
         destination ??= DestinationFor(app);
@@ -37,22 +41,24 @@ public class AppDownloader
             client.Timeout = TimeSpan.FromMinutes(30); // Allow for large downloads
 
             // Get content length for progress reporting
-            using var headResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri));
+            using var headResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri), cancellationToken);
             var totalBytes = headResponse.Content.Headers.ContentLength;
 
-            using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+            using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             await using var fileStream = File.Create(destination);
-            await using var downloadStream = await response.Content.ReadAsStreamAsync();
+            await using var downloadStream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
             var buffer = new byte[8192];
             long bytesDownloaded = 0;
             int bytesRead;
 
-            while ((bytesRead = await downloadStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            while ((bytesRead = await downloadStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
             {
-                await fileStream.WriteAsync(buffer, 0, bytesRead);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
                 bytesDownloaded += bytesRead;
 
                 if (progress != null && totalBytes.HasValue && totalBytes > 0)

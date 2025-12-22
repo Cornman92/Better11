@@ -134,7 +134,8 @@ namespace Better11.Core.Services
             string appId,
             bool force = false,
             bool skipDependencies = false,
-            IProgress<OperationProgress>? progress = null)
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken cancellationToken = default)
         {
             try
             {
@@ -142,7 +143,7 @@ namespace Better11.Core.Services
 
                 // Use AppManager directly for progress reporting support
                 var manager = new AppManager(_catalogPath, _downloadDir, _stateFile, logger: _logger);
-                var (status, installerResult) = await manager.InstallAsync(appId, progress);
+                var (status, installerResult) = await manager.InstallAsync(appId, progress, cancellationToken);
 
                 return new InstallResult
                 {
@@ -151,6 +152,25 @@ namespace Better11.Core.Services
                     Version = status.Version,
                     Status = installerResult.ReturnCode == 0 ? "Installed" : "Failed",
                     ErrorMessage = installerResult.ReturnCode != 0 ? installerResult.Stderr : null
+                };
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Installation cancelled for: {AppId}", appId);
+                progress?.Report(new OperationProgress
+                {
+                    AppId = appId,
+                    Stage = OperationStage.Failed,
+                    PercentComplete = 0,
+                    Message = "Installation cancelled by user",
+                    IsComplete = true,
+                    ErrorMessage = "Operation cancelled"
+                });
+                return new InstallResult
+                {
+                    Success = false,
+                    AppId = appId,
+                    ErrorMessage = "Installation cancelled by user"
                 };
             }
             catch (Exception ex)

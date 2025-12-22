@@ -24,6 +24,7 @@ namespace Better11.WinUI.ViewModels
     {
         private readonly IAppManager _appManager;
         private readonly ILogger<ApplicationsViewModel> _logger;
+        private CancellationTokenSource? _installCancellationTokenSource;
 
         [ObservableProperty]
         private ObservableCollection<AppViewModel> _applications = new();
@@ -166,6 +167,9 @@ namespace Better11.WinUI.ViewModels
                 ProgressValue = 0;
                 ProgressMessage = "Starting installation...";
 
+                // Create cancellation token source for this operation
+                _installCancellationTokenSource = new CancellationTokenSource();
+
                 var progress = new Progress<OperationProgress>(p =>
                 {
                     ProgressValue = p.PercentComplete;
@@ -177,7 +181,10 @@ namespace Better11.WinUI.ViewModels
                     }
                 });
 
-                var result = await _appManager.InstallAppAsync(appId, progress: progress);
+                var result = await _appManager.InstallAppAsync(
+                    appId,
+                    progress: progress,
+                    cancellationToken: _installCancellationTokenSource.Token);
 
                 if (result.Success)
                 {
@@ -193,16 +200,25 @@ namespace Better11.WinUI.ViewModels
                 }
                 else
                 {
-                    var errorDialog = new ContentDialog
+                    // Only show error dialog if not cancelled
+                    if (!_installCancellationTokenSource.Token.IsCancellationRequested)
                     {
-                        Title = "Installation Failed",
-                        Content = $"Failed to install {appId}:\n{result.ErrorMessage}",
-                        CloseButtonText = "OK",
-                        XamlRoot = App.GetService<MainWindow>().Content.XamlRoot
-                    };
-                    await errorDialog.ShowAsync();
-                    _logger.LogError("Installation failed: {Error}", result.ErrorMessage);
+                        var errorDialog = new ContentDialog
+                        {
+                            Title = "Installation Failed",
+                            Content = $"Failed to install {appId}:\n{result.ErrorMessage}",
+                            CloseButtonText = "OK",
+                            XamlRoot = App.GetService<MainWindow>().Content.XamlRoot
+                        };
+                        await errorDialog.ShowAsync();
+                        _logger.LogError("Installation failed: {Error}", result.ErrorMessage);
+                    }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Installation cancelled: {AppId}", appId);
+                // User cancellation, no need to show error
             }
             catch (Exception ex)
             {
@@ -222,7 +238,16 @@ namespace Better11.WinUI.ViewModels
             {
                 IsLoading = false;
                 ShowProgress = false;
+                _installCancellationTokenSource?.Dispose();
+                _installCancellationTokenSource = null;
             }
+        }
+
+        [RelayCommand]
+        private void CancelInstall()
+        {
+            _logger.LogInformation("Cancelling installation");
+            _installCancellationTokenSource?.Cancel();
         }
 
         private async Task UninstallAppAsync(string appId)

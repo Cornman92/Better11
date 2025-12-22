@@ -61,21 +61,38 @@
         </Grid>
 
         <!-- Progress Indicator -->
-        <StackPanel Grid.Row="2"
-                    Visibility="{x:Bind ViewModel.ShowProgress, Mode=OneWay}"
-                    Margin="0,0,0,16"
-                    Spacing="8">
-            <ProgressBar
-                IsIndeterminate="False"
-                Value="{x:Bind ViewModel.ProgressValue, Mode=OneWay}"
-                Maximum="100"
-                ShowError="False"
-                ShowPaused="False"/>
-            <TextBlock
-                Text="{x:Bind ViewModel.ProgressMessage, Mode=OneWay}"
-                Style="{StaticResource CaptionTextBlockStyle}"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-        </StackPanel>
+        <Grid Grid.Row="2"
+              Visibility="{x:Bind ViewModel.ShowProgress, Mode=OneWay}"
+              Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Spacing="8">
+                <ProgressBar
+                    IsIndeterminate="False"
+                    Value="{x:Bind ViewModel.ProgressValue, Mode=OneWay}"
+                    Maximum="100"
+                    ShowError="False"
+                    ShowPaused="False"/>
+                <TextBlock
+                    Text="{x:Bind ViewModel.ProgressMessage, Mode=OneWay}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <Button
+                Grid.Column="1"
+                Content="Cancel"
+                Command="{x:Bind ViewModel.CancelInstallCommand}"
+                VerticalAlignment="Center"
+                Margin="12,0,0,0">
+                <Button.Icon>
+                    <FontIcon Glyph="&#xE711;"/>
+                </Button.Icon>
+            </Button>
+        </Grid>
 
         <!-- Applications List -->
         <ScrollViewer Grid.Row="3">

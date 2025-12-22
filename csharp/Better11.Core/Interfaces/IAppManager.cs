@@ -14,7 +14,8 @@ namespace Better11.Core.Interfaces
             string appId,
             bool force = false,
             bool skipDependencies = false,
-            IProgress<OperationProgress>? progress = null);
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken cancellationToken = default);
 
         Task<UninstallResult> UninstallAppAsync(string appId, bool force = false);
 
