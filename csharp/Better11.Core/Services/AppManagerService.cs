@@ -354,5 +354,43 @@ namespace Better11.Core.Services
                 throw;
             }
         }
+
+        public async Task<BatchOperationResult> BatchInstallAsync(
+            IEnumerable<string> appIds,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken cancellationToken = default,
+            bool continueOnError = true)
+        {
+            try
+            {
+                _logger.LogInformation("Starting batch install for {Count} applications", appIds.Count());
+
+                var manager = new AppManager(_catalogPath, _downloadDir, _stateFile, logger: _logger);
+                return await manager.BatchInstallAsync(appIds, progress, cancellationToken, continueOnError);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Batch install operation failed");
+                throw;
+            }
+        }
+
+        public async Task<BatchOperationResult> BatchUninstallAsync(
+            IEnumerable<string> appIds,
+            bool continueOnError = true)
+        {
+            try
+            {
+                _logger.LogInformation("Starting batch uninstall for {Count} applications", appIds.Count());
+
+                var manager = new AppManager(_catalogPath, _downloadDir, _stateFile, logger: _logger);
+                return await Task.Run(() => manager.BatchUninstall(appIds, continueOnError));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Batch uninstall operation failed");
+                throw;
+            }
+        }
     }
 }

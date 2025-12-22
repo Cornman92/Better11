@@ -22,5 +22,15 @@ namespace Better11.Core.Interfaces
         Task<List<AppStatus>> GetAppStatusAsync(string? appId = null);
 
         Task<InstallPlanSummary> GetInstallPlanAsync(string appId);
+
+        Task<BatchOperationResult> BatchInstallAsync(
+            IEnumerable<string> appIds,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken cancellationToken = default,
+            bool continueOnError = true);
+
+        Task<BatchOperationResult> BatchUninstallAsync(
+            IEnumerable<string> appIds,
+            bool continueOnError = true);
     }
 }

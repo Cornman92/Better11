@@ -415,6 +415,151 @@ public class AppManager
 
         return (destination, cacheHit);
     }
+
+    /// <summary>
+    /// Install multiple applications in sequence with progress reporting.
+    /// </summary>
+    /// <param name="appIds">List of application IDs to install.</param>
+    /// <param name="progress">Optional progress reporter for batch operation.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="continueOnError">If true, continue installing remaining apps even if one fails.</param>
+    /// <returns>Batch operation result with individual results for each app.</returns>
+    public async Task<BatchOperationResult> BatchInstallAsync(
+        IEnumerable<string> appIds,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken cancellationToken = default,
+        bool continueOnError = true)
+    {
+        var appIdList = appIds.ToList();
+        var result = new BatchOperationResult();
+        var processed = 0;
+
+        foreach (var appId in appIdList)
+        {
+            var itemStart = DateTime.Now;
+
+            try
+            {
+                ValidationHelper.ValidateAppId(appId, nameof(appId));
+
+                progress?.Report(new OperationProgress
+                {
+                    AppId = appId,
+                    Stage = OperationStage.Initializing,
+                    PercentComplete = (double)processed / appIdList.Count * 100,
+                    Message = $"Installing {appId} ({processed + 1} of {appIdList.Count})",
+                    IsComplete = false
+                });
+
+                var (status, installerResult) = await InstallAsync(appId, progress, cancellationToken);
+
+                result.Results.Add(new BatchItemResult
+                {
+                    AppId = appId,
+                    Success = installerResult.ReturnCode == 0,
+                    Version = status.Version,
+                    Status = installerResult.ReturnCode == 0 ? "Installed" : "Failed",
+                    ErrorMessage = installerResult.ReturnCode != 0 ? installerResult.Stderr : null,
+                    Duration = DateTime.Now - itemStart
+                });
+
+                _logger?.LogInformation("Batch install: {AppId} completed with code {Code}",
+                    appId, installerResult.ReturnCode);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Batch install: Failed to install {AppId}", appId);
+
+                result.Results.Add(new BatchItemResult
+                {
+                    AppId = appId,
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    Status = "Error",
+                    Duration = DateTime.Now - itemStart
+                });
+
+                if (!continueOnError)
+                {
+                    break;
+                }
+            }
+
+            processed++;
+        }
+
+        result.EndTime = DateTime.Now;
+
+        progress?.Report(new OperationProgress
+        {
+            AppId = string.Join(", ", appIdList),
+            Stage = OperationStage.Completed,
+            PercentComplete = 100,
+            Message = $"Batch installation complete: {result.SuccessCount}/{result.TotalCount} succeeded",
+            IsComplete = true
+        });
+
+        return result;
+    }
+
+    /// <summary>
+    /// Uninstall multiple applications in sequence.
+    /// </summary>
+    /// <param name="appIds">List of application IDs to uninstall.</param>
+    /// <param name="continueOnError">If true, continue uninstalling remaining apps even if one fails.</param>
+    /// <returns>Batch operation result with individual results for each app.</returns>
+    public BatchOperationResult BatchUninstall(
+        IEnumerable<string> appIds,
+        bool continueOnError = true)
+    {
+        var appIdList = appIds.ToList();
+        var result = new BatchOperationResult();
+
+        foreach (var appId in appIdList)
+        {
+            var itemStart = DateTime.Now;
+
+            try
+            {
+                ValidationHelper.ValidateAppId(appId, nameof(appId));
+
+                var installerResult = Uninstall(appId);
+
+                result.Results.Add(new BatchItemResult
+                {
+                    AppId = appId,
+                    Success = installerResult.ReturnCode == 0,
+                    Status = installerResult.ReturnCode == 0 ? "Uninstalled" : "Failed",
+                    ErrorMessage = installerResult.ReturnCode != 0 ? installerResult.Stderr : null,
+                    Duration = DateTime.Now - itemStart
+                });
+
+                _logger?.LogInformation("Batch uninstall: {AppId} completed with code {Code}",
+                    appId, installerResult.ReturnCode);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Batch uninstall: Failed to uninstall {AppId}", appId);
+
+                result.Results.Add(new BatchItemResult
+                {
+                    AppId = appId,
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    Status = "Error",
+                    Duration = DateTime.Now - itemStart
+                });
+
+                if (!continueOnError)
+                {
+                    break;
+                }
+            }
+        }
+
+        result.EndTime = DateTime.Now;
+        return result;
+    }
 }
 
 /// <summary>
