@@ -1,4 +1,5 @@
 using Better11.Core.Apps.Models;
+using Better11.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Better11.Core.Apps;
@@ -48,13 +49,16 @@ public class AppManager
         return await _downloader.DownloadAsync(app);
     }
 
-    public async Task<(AppStatus, InstallerResult)> InstallAsync(string appId)
+    public async Task<(AppStatus, InstallerResult)> InstallAsync(string appId, IProgress<OperationProgress>? progress = null)
     {
         var visited = new HashSet<string>();
-        return await InstallRecursiveAsync(appId, visited);
+        return await InstallRecursiveAsync(appId, visited, progress);
     }
 
-    private async Task<(AppStatus, InstallerResult)> InstallRecursiveAsync(string appId, HashSet<string> visited)
+    private async Task<(AppStatus, InstallerResult)> InstallRecursiveAsync(
+        string appId,
+        HashSet<string> visited,
+        IProgress<OperationProgress>? progress = null)
     {
         if (visited.Contains(appId))
         {
@@ -64,11 +68,28 @@ public class AppManager
 
         try
         {
+            progress?.Report(new OperationProgress
+            {
+                AppId = appId,
+                Stage = OperationStage.Initializing,
+                PercentComplete = 0,
+                Message = $"Initializing installation for {appId}",
+                IsComplete = false
+            });
+
             var app = _catalog.Get(appId);
             var existing = _stateStore.Get(appId);
             if (existing != null && existing.Installed && existing.Version == app.Version)
             {
                 _logger?.LogInformation("{AppId} is already installed (version {Version})", appId, app.Version);
+                progress?.Report(new OperationProgress
+                {
+                    AppId = appId,
+                    Stage = OperationStage.Completed,
+                    PercentComplete = 100,
+                    Message = $"{app.Name} is already installed",
+                    IsComplete = true
+                });
                 return (existing, new InstallerResult
                 {
                     Command = new List<string>(),
@@ -78,21 +99,78 @@ public class AppManager
                 });
             }
 
+            progress?.Report(new OperationProgress
+            {
+                AppId = appId,
+                Stage = OperationStage.ResolvingDependencies,
+                PercentComplete = 10,
+                Message = $"Resolving dependencies for {app.Name}",
+                IsComplete = false
+            });
+
             var dependencyStatuses = new Dictionary<string, AppStatus>();
             foreach (var dependencyId in app.Dependencies)
             {
-                var (depStatus, _) = await InstallRecursiveAsync(dependencyId, visited);
+                var (depStatus, _) = await InstallRecursiveAsync(dependencyId, visited, progress);
                 dependencyStatuses[dependencyId] = depStatus;
             }
 
-            var installerPath = await DownloadAsync(appId);
+            progress?.Report(new OperationProgress
+            {
+                AppId = appId,
+                Stage = OperationStage.Downloading,
+                PercentComplete = 30,
+                Message = $"Starting download for {app.Name}",
+                IsComplete = false
+            });
+
+            var installerPath = await _downloader.DownloadAsync(app, progress: progress);
+
+            progress?.Report(new OperationProgress
+            {
+                AppId = appId,
+                Stage = OperationStage.Verifying,
+                PercentComplete = 70,
+                Message = $"Verifying {app.Name}",
+                IsComplete = false
+            });
+
             await _verifier.VerifyAsync(app, installerPath);
+
+            progress?.Report(new OperationProgress
+            {
+                AppId = appId,
+                Stage = OperationStage.Installing,
+                PercentComplete = 80,
+                Message = $"Installing {app.Name}",
+                IsComplete = false
+            });
+
             var result = _runner.Install(app, installerPath);
+
+            progress?.Report(new OperationProgress
+            {
+                AppId = appId,
+                Stage = OperationStage.UpdatingState,
+                PercentComplete = 95,
+                Message = $"Updating installation state for {app.Name}",
+                IsComplete = false
+            });
+
             var status = _stateStore.MarkInstalled(
                 app.AppId,
                 app.Version,
                 installerPath,
                 dependencyStatuses.Keys.ToList());
+
+            progress?.Report(new OperationProgress
+            {
+                AppId = appId,
+                Stage = OperationStage.Completed,
+                PercentComplete = 100,
+                Message = $"Successfully installed {app.Name}",
+                IsComplete = true
+            });
 
             return (status, result);
         }

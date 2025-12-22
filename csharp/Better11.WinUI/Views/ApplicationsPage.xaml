@@ -12,6 +12,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -59,8 +60,25 @@
             </Button>
         </Grid>
 
+        <!-- Progress Indicator -->
+        <StackPanel Grid.Row="2"
+                    Visibility="{x:Bind ViewModel.ShowProgress, Mode=OneWay}"
+                    Margin="0,0,0,16"
+                    Spacing="8">
+            <ProgressBar
+                IsIndeterminate="False"
+                Value="{x:Bind ViewModel.ProgressValue, Mode=OneWay}"
+                Maximum="100"
+                ShowError="False"
+                ShowPaused="False"/>
+            <TextBlock
+                Text="{x:Bind ViewModel.ProgressMessage, Mode=OneWay}"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
         <!-- Applications List -->
-        <ScrollViewer Grid.Row="2">
+        <ScrollViewer Grid.Row="3">
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.FilteredApplications, Mode=OneWay}">
                 <ItemsRepeater.Layout>
                     <UniformGridLayout 

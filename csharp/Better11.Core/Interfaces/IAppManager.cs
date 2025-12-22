@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Better11.Core.Apps.Models;
@@ -12,7 +13,8 @@ namespace Better11.Core.Interfaces
         Task<InstallResult> InstallAppAsync(
             string appId,
             bool force = false,
-            bool skipDependencies = false);
+            bool skipDependencies = false,
+            IProgress<OperationProgress>? progress = null);
 
         Task<UninstallResult> UninstallAppAsync(string appId, bool force = false);
 

@@ -130,44 +130,41 @@ namespace Better11.Core.Services
             }
         }
 
-        public async Task<InstallResult> InstallAppAsync(string appId, bool force = false, bool skipDependencies = false)
+        public async Task<InstallResult> InstallAppAsync(
+            string appId,
+            bool force = false,
+            bool skipDependencies = false,
+            IProgress<OperationProgress>? progress = null)
         {
             try
             {
                 _logger.LogInformation("Installing application: {AppId}", appId);
 
-                var parameters = new Dictionary<string, object>
-                {
-                    { "AppId", appId },
-                    { "Force", force },
-                    { "SkipDependencies", skipDependencies }
-                };
-
-                var result = await _psExecutor.ExecuteCommandAsync("Install-Better11App", parameters);
-
-                if (!result.Success)
-                {
-                    return new InstallResult
-                    {
-                        Success = false,
-                        AppId = appId,
-                        ErrorMessage = string.Join("\n", result.Errors)
-                    };
-                }
-
-                var output = result.Output.FirstOrDefault() as PSObject;
+                // Use AppManager directly for progress reporting support
+                var manager = new AppManager(_catalogPath, _downloadDir, _stateFile, logger: _logger);
+                var (status, installerResult) = await manager.InstallAsync(appId, progress);
 
                 return new InstallResult
                 {
-                    Success = true,
+                    Success = installerResult.ReturnCode == 0,
                     AppId = appId,
-                    Version = output?.Properties["Version"]?.Value?.ToString() ?? string.Empty,
-                    Status = output?.Properties["Status"]?.Value?.ToString() ?? "Unknown"
+                    Version = status.Version,
+                    Status = installerResult.ReturnCode == 0 ? "Installed" : "Failed",
+                    ErrorMessage = installerResult.ReturnCode != 0 ? installerResult.Stderr : null
                 };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to install application: {AppId}", appId);
+                progress?.Report(new OperationProgress
+                {
+                    AppId = appId,
+                    Stage = OperationStage.Failed,
+                    PercentComplete = 0,
+                    Message = $"Installation failed: {ex.Message}",
+                    IsComplete = true,
+                    ErrorMessage = ex.Message
+                });
                 return new InstallResult
                 {
                     Success = false,

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using Better11.Core.Apps.Models;
+using Better11.Core.Models;
 
 namespace Better11.Core.Apps;
 
@@ -19,7 +20,7 @@ public class AppDownloader
         Directory.CreateDirectory(_downloadRoot);
     }
 
-    public async Task<string> DownloadAsync(AppMetadata app, string? destination = null)
+    public async Task<string> DownloadAsync(AppMetadata app, string? destination = null, IProgress<OperationProgress>? progress = null)
     {
         var uri = new Uri(app.Uri, UriKind.RelativeOrAbsolute);
         destination ??= DestinationFor(app);
@@ -33,11 +34,42 @@ public class AppDownloader
             }
 
             using var client = new HttpClient();
-            using var response = await client.GetAsync(uri);
+            client.Timeout = TimeSpan.FromMinutes(30); // Allow for large downloads
+
+            // Get content length for progress reporting
+            using var headResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri));
+            var totalBytes = headResponse.Content.Headers.ContentLength;
+
+            using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 
             await using var fileStream = File.Create(destination);
-            await response.Content.CopyToAsync(fileStream);
+            await using var downloadStream = await response.Content.ReadAsStreamAsync();
+
+            var buffer = new byte[8192];
+            long bytesDownloaded = 0;
+            int bytesRead;
+
+            while ((bytesRead = await downloadStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                await fileStream.WriteAsync(buffer, 0, bytesRead);
+                bytesDownloaded += bytesRead;
+
+                if (progress != null && totalBytes.HasValue && totalBytes > 0)
+                {
+                    var percentComplete = (double)bytesDownloaded / totalBytes.Value * 100;
+                    progress.Report(new OperationProgress
+                    {
+                        AppId = app.AppId,
+                        Stage = OperationStage.Downloading,
+                        PercentComplete = percentComplete,
+                        Message = $"Downloading {app.Name}: {FormatBytes(bytesDownloaded)} / {FormatBytes(totalBytes.Value)}",
+                        TotalBytes = totalBytes.Value,
+                        BytesDownloaded = bytesDownloaded,
+                        IsComplete = false
+                    });
+                }
+            }
 
             return destination;
         }
@@ -63,7 +95,7 @@ public class AppDownloader
         throw new DownloadException($"Unsupported URI scheme for {app.Uri}");
     }
 
-    private string DestinationFor(AppMetadata app)
+    public string DestinationFor(AppMetadata app)
     {
         var uri = new Uri(app.Uri, UriKind.RelativeOrAbsolute);
         var filename = Path.GetFileName(uri.LocalPath);
@@ -72,6 +104,19 @@ public class AppDownloader
             throw new DownloadException($"Unable to determine filename from {app.Uri}");
         }
         return Path.Combine(_downloadRoot, filename);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
     }
 }
 

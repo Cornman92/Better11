@@ -40,6 +40,15 @@ namespace Better11.WinUI.ViewModels
         [ObservableProperty]
         private bool _isLoading = false;
 
+        [ObservableProperty]
+        private bool _showProgress = false;
+
+        [ObservableProperty]
+        private double _progressValue = 0;
+
+        [ObservableProperty]
+        private string _progressMessage = string.Empty;
+
         public ApplicationsViewModel(
             IAppManager appManager,
             ILogger<ApplicationsViewModel> logger)
@@ -153,27 +162,66 @@ namespace Better11.WinUI.ViewModels
                 _logger.LogInformation("Installing app: {AppId}", appId);
 
                 IsLoading = true;
+                ShowProgress = true;
+                ProgressValue = 0;
+                ProgressMessage = "Starting installation...";
 
-                var result = await _appManager.InstallAppAsync(appId);
+                var progress = new Progress<OperationProgress>(p =>
+                {
+                    ProgressValue = p.PercentComplete;
+                    ProgressMessage = p.Message;
+
+                    if (p.IsComplete)
+                    {
+                        ShowProgress = false;
+                    }
+                });
+
+                var result = await _appManager.InstallAppAsync(appId, progress: progress);
 
                 if (result.Success)
                 {
-                    // TODO: Show success notification
+                    var successDialog = new ContentDialog
+                    {
+                        Title = "Installation Complete",
+                        Content = $"{appId} has been successfully installed.",
+                        CloseButtonText = "OK",
+                        XamlRoot = App.GetService<MainWindow>().Content.XamlRoot
+                    };
+                    await successDialog.ShowAsync();
                     await LoadApplicationsAsync(); // Refresh list
                 }
                 else
                 {
-                    // TODO: Show error dialog
+                    var errorDialog = new ContentDialog
+                    {
+                        Title = "Installation Failed",
+                        Content = $"Failed to install {appId}:\n{result.ErrorMessage}",
+                        CloseButtonText = "OK",
+                        XamlRoot = App.GetService<MainWindow>().Content.XamlRoot
+                    };
+                    await errorDialog.ShowAsync();
                     _logger.LogError("Installation failed: {Error}", result.ErrorMessage);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to install app: {AppId}", appId);
+                ShowProgress = false;
+
+                var errorDialog = new ContentDialog
+                {
+                    Title = "Error",
+                    Content = $"An error occurred:\n{ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = App.GetService<MainWindow>().Content.XamlRoot
+                };
+                await errorDialog.ShowAsync();
             }
             finally
             {
                 IsLoading = false;
+                ShowProgress = false;
             }
         }
 
