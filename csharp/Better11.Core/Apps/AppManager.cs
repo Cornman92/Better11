@@ -1,5 +1,6 @@
 using Better11.Core.Apps.Models;
 using Better11.Core.Models;
+using Better11.Core.Validation;
 using Microsoft.Extensions.Logging;
 
 namespace Better11.Core.Apps;
@@ -44,6 +45,8 @@ public class AppManager
 
     public async Task<string> DownloadAsync(string appId)
     {
+        ValidationHelper.ValidateAppId(appId, nameof(appId));
+
         var app = _catalog.Get(appId);
         _logger?.LogInformation("Downloading {Name} from {Uri}", app.Name, app.Uri);
         return await _downloader.DownloadAsync(app);
@@ -54,6 +57,8 @@ public class AppManager
         IProgress<OperationProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        ValidationHelper.ValidateAppId(appId, nameof(appId));
+
         var visited = new HashSet<string>();
         return await InstallRecursiveAsync(appId, visited, progress, cancellationToken);
     }
@@ -191,6 +196,8 @@ public class AppManager
 
     public InstallerResult Uninstall(string appId)
     {
+        ValidationHelper.ValidateAppId(appId, nameof(appId));
+
         EnsureNotRequiredByDependents(appId);
         var status = _stateStore.Get(appId);
         if (status == null || !status.Installed)
@@ -231,6 +238,7 @@ public class AppManager
     {
         if (appId != null)
         {
+            ValidationHelper.ValidateAppId(appId, nameof(appId));
             var status = _stateStore.Get(appId);
             return status != null ? new List<AppStatus> { status } : new List<AppStatus>();
         }
@@ -255,6 +263,8 @@ public class AppManager
     /// <returns>Installation plan summary with dependency ordering and warnings</returns>
     public InstallPlanSummary BuildInstallPlan(string appId)
     {
+        ValidationHelper.ValidateAppId(appId, nameof(appId));
+
         var summary = new InstallPlanSummary { TargetAppId = appId };
         var visited = new HashSet<string>();
         var visitingStack = new List<string>();
@@ -376,6 +386,8 @@ public class AppManager
     /// <returns>Tuple of (path, cacheHit)</returns>
     public async Task<(string Path, bool CacheHit)> DownloadWithCacheAsync(string appId)
     {
+        ValidationHelper.ValidateAppId(appId, nameof(appId));
+
         var app = _catalog.Get(appId);
         var destination = _downloader.DestinationFor(app);
         var cacheHit = false;
