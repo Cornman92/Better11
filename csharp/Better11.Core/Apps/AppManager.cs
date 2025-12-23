@@ -32,7 +32,7 @@ public class AppManager
         downloadDir ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".better11", "downloads");
         stateFile ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".better11", "installed.json");
 
-        _downloader = downloader ?? new AppDownloader(downloadDir, catalogDir);
+        _downloader = downloader ?? new AppDownloader(downloadDir, catalogDir, logger);
         _verifier = verifier ?? new DownloadVerifier();
         _runner = runner ?? new InstallerRunner();
         _stateStore = new InstallationStateStore(stateFile);

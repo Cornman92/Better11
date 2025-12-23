@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http;
 using Better11.Core.Apps.Models;
 using Better11.Core.Models;
+using Better11.Core.Utilities;
+using Microsoft.Extensions.Logging;
 
 namespace Better11.Core.Apps;
 
@@ -12,11 +14,13 @@ public class AppDownloader
 {
     private readonly string _downloadRoot;
     private readonly string _sourceRoot;
+    private readonly ILogger? _logger;
 
-    public AppDownloader(string downloadRoot, string? sourceRoot = null)
+    public AppDownloader(string downloadRoot, string? sourceRoot = null, ILogger? logger = null)
     {
         _downloadRoot = downloadRoot;
         _sourceRoot = sourceRoot ?? Directory.GetCurrentDirectory();
+        _logger = logger;
         Directory.CreateDirectory(_downloadRoot);
     }
 
@@ -37,47 +41,69 @@ public class AppDownloader
                 throw new DownloadException($"Host '{hostname}' is not in vetted domains for {app.AppId}");
             }
 
-            using var client = new HttpClient();
-            client.Timeout = TimeSpan.FromMinutes(30); // Allow for large downloads
-
-            // Get content length for progress reporting
-            using var headResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri), cancellationToken);
-            var totalBytes = headResponse.Content.Headers.ContentLength;
-
-            using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            response.EnsureSuccessStatusCode();
-
-            await using var fileStream = File.Create(destination);
-            await using var downloadStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-
-            var buffer = new byte[8192];
-            long bytesDownloaded = 0;
-            int bytesRead;
-
-            while ((bytesRead = await downloadStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
-                bytesDownloaded += bytesRead;
-
-                if (progress != null && totalBytes.HasValue && totalBytes > 0)
+            // Wrap the download operation with retry logic
+            return await RetryHelper.ExecuteWithRetryAsync(
+                async () =>
                 {
-                    var percentComplete = (double)bytesDownloaded / totalBytes.Value * 100;
-                    progress.Report(new OperationProgress
+                    using var client = new HttpClient();
+                    client.Timeout = TimeSpan.FromMinutes(30); // Allow for large downloads
+
+                    // Get content length for progress reporting
+                    using var headResponse = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri), cancellationToken);
+                    var totalBytes = headResponse.Content.Headers.ContentLength;
+
+                    using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                    response.EnsureSuccessStatusCode();
+
+                    await using var fileStream = File.Create(destination);
+                    await using var downloadStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+                    var buffer = new byte[8192];
+                    long bytesDownloaded = 0;
+                    int bytesRead;
+
+                    while ((bytesRead = await downloadStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                        bytesDownloaded += bytesRead;
+
+                        if (progress != null && totalBytes.HasValue && totalBytes > 0)
+                        {
+                            var percentComplete = (double)bytesDownloaded / totalBytes.Value * 100;
+                            progress.Report(new OperationProgress
+                            {
+                                AppId = app.AppId,
+                                Stage = OperationStage.Downloading,
+                                PercentComplete = percentComplete,
+                                Message = $"Downloading {app.Name}: {FormatBytes(bytesDownloaded)} / {FormatBytes(totalBytes.Value)}",
+                                TotalBytes = totalBytes.Value,
+                                BytesDownloaded = bytesDownloaded,
+                                IsComplete = false
+                            });
+                        }
+                    }
+
+                    return destination;
+                },
+                policy: RetryHelper.DefaultPolicy,
+                onRetry: (attempt, exception, delay) =>
+                {
+                    _logger?.LogWarning("Download retry attempt {Attempt} for {AppName} after {Delay}ms due to: {Error}",
+                        attempt, app.Name, delay.TotalMilliseconds, exception.Message);
+
+                    progress?.Report(new OperationProgress
                     {
                         AppId = app.AppId,
                         Stage = OperationStage.Downloading,
-                        PercentComplete = percentComplete,
-                        Message = $"Downloading {app.Name}: {FormatBytes(bytesDownloaded)} / {FormatBytes(totalBytes.Value)}",
-                        TotalBytes = totalBytes.Value,
-                        BytesDownloaded = bytesDownloaded,
+                        PercentComplete = 0,
+                        Message = $"Retrying download (attempt {attempt + 1})...",
                         IsComplete = false
                     });
-                }
-            }
-
-            return destination;
+                },
+                cancellationToken: cancellationToken,
+                logger: _logger);
         }
 
         if (uri.Scheme == "file" || uri.Scheme == "")
