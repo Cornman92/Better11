@@ -39,9 +39,51 @@ public class AppManager
         _logger = logger;
     }
 
-    public List<AppMetadata> ListAvailable()
+    public List<AppMetadata> ListAvailable(string? category = null)
     {
-        return _cachedCatalog.ListAll();
+        var apps = _cachedCatalog.ListAll();
+
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            apps = apps.Where(a => a.Categories.Contains(category, StringComparer.OrdinalIgnoreCase)).ToList();
+        }
+
+        return apps;
+    }
+
+    /// <summary>
+    /// Gets all available categories from the catalog.
+    /// </summary>
+    public List<string> GetCategories()
+    {
+        var apps = _cachedCatalog.ListAll();
+        return apps.SelectMany(a => a.Categories)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Searches for apps by name, description, or app ID.
+    /// </summary>
+    public List<AppMetadata> SearchApps(string query, string? category = null)
+    {
+        ValidationHelper.ValidateNoCommandInjection(query, nameof(query));
+
+        var apps = ListAvailable(category);
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return apps;
+        }
+
+        var normalizedQuery = query.Trim().ToLowerInvariant();
+
+        return apps.Where(a =>
+            a.Name.ToLowerInvariant().Contains(normalizedQuery) ||
+            a.AppId.ToLowerInvariant().Contains(normalizedQuery) ||
+            (a.Description?.ToLowerInvariant().Contains(normalizedQuery) ?? false)
+        ).ToList();
     }
 
     /// <summary>

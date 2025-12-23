@@ -76,9 +76,14 @@ public class AppCatalog
         var vettedDomains = CoerceStringList(entry, index, "vetted_domains");
         var dependencies = CoerceStringList(entry, index, "dependencies");
         var silentArgs = CoerceStringList(entry, index, "silent_args");
+        var categories = CoerceStringList(entry, index, "categories");
 
-        var uninstallCommand = entry.TryGetProperty("uninstall_command", out var uninstallElement) 
-            ? uninstallElement.GetString() 
+        var description = entry.TryGetProperty("description", out var descElement)
+            ? descElement.GetString()
+            : null;
+
+        var uninstallCommand = entry.TryGetProperty("uninstall_command", out var uninstallElement)
+            ? uninstallElement.GetString()
             : null;
 
         var signature = entry.TryGetProperty("signature", out var sigElement) 
@@ -116,7 +121,9 @@ public class AppCatalog
             SignatureKey = signatureKey,
             Dependencies = dependencies,
             SilentArgs = silentArgs,
-            UninstallCommand = uninstallCommand
+            UninstallCommand = uninstallCommand,
+            Categories = categories,
+            Description = description
         };
     }
 

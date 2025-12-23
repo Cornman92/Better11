@@ -36,46 +36,51 @@ namespace Better11.Core.Services
             _stateFile = Path.Combine(better11Dir, "installed.json");
         }
 
-        public async Task<List<AppMetadata>> ListAvailableAppsAsync()
+        public async Task<List<AppMetadata>> ListAvailableAppsAsync(string? category = null)
         {
             try
             {
                 _logger.LogInformation("Fetching available applications");
 
-                var result = await _psExecutor.ExecuteCommandAsync("Get-Better11Apps");
-
-                if (!result.Success)
-                {
-                    throw new InvalidOperationException(
-                        $"Failed to get applications: {string.Join(", ", result.Errors)}");
-                }
-
-                var apps = new List<AppMetadata>();
-
-                foreach (var item in result.Output)
-                {
-                    var psObj = item as PSObject;
-                    if (psObj == null) continue;
-
-                    apps.Add(new AppMetadata
-                    {
-                        AppId = psObj.Properties["AppId"]?.Value?.ToString() ?? string.Empty,
-                        Name = psObj.Properties["Name"]?.Value?.ToString() ?? string.Empty,
-                        Version = psObj.Properties["Version"]?.Value?.ToString() ?? string.Empty,
-                        InstallerType = ParseInstallerType(
-                            psObj.Properties["InstallerType"]?.Value?.ToString() ?? "exe"),
-                        Description = psObj.Properties["Description"]?.Value?.ToString(),
-                        Dependencies = ParseStringList(psObj.Properties["Dependencies"]?.Value),
-                        IsInstalled = Convert.ToBoolean(psObj.Properties["Installed"]?.Value ?? false)
-                    });
-                }
-
-                _logger.LogInformation("Retrieved {Count} applications", apps.Count);
-                return apps;
+                // Use AppManager for category filtering support
+                var manager = new AppManager(_catalogPath, _downloadDir, _stateFile, logger: _logger);
+                return await Task.Run(() => manager.ListAvailable(category));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to list available applications");
+                throw;
+            }
+        }
+
+        public async Task<List<string>> GetCategoriesAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Fetching application categories");
+
+                var manager = new AppManager(_catalogPath, _downloadDir, _stateFile, logger: _logger);
+                return await Task.Run(() => manager.GetCategories());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get categories");
+                throw;
+            }
+        }
+
+        public async Task<List<AppMetadata>> SearchAppsAsync(string query, string? category = null)
+        {
+            try
+            {
+                _logger.LogInformation("Searching applications with query: {Query}, category: {Category}", query, category ?? "all");
+
+                var manager = new AppManager(_catalogPath, _downloadDir, _stateFile, logger: _logger);
+                return await Task.Run(() => manager.SearchApps(query, category));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to search applications");
                 throw;
             }
         }

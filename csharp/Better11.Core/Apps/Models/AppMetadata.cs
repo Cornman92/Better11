@@ -17,6 +17,9 @@ public class AppMetadata
     public List<string> Dependencies { get; init; } = new();
     public List<string> SilentArgs { get; init; } = new();
     public string? UninstallCommand { get; init; }
+    public List<string> Categories { get; init; } = new();
+    public string? Description { get; init; }
+    public bool IsInstalled { get; set; }
 
     public bool DomainIsVetted(string hostname)
     {

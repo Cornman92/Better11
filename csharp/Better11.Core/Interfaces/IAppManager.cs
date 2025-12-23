@@ -8,7 +8,11 @@ namespace Better11.Core.Interfaces
 {
     public interface IAppManager
     {
-        Task<List<AppMetadata>> ListAvailableAppsAsync();
+        Task<List<AppMetadata>> ListAvailableAppsAsync(string? category = null);
+
+        Task<List<string>> GetCategoriesAsync();
+
+        Task<List<AppMetadata>> SearchAppsAsync(string query, string? category = null);
 
         Task<InstallResult> InstallAppAsync(
             string appId,
