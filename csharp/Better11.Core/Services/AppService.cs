@@ -134,9 +134,14 @@ namespace Better11.Core.Services
                 await InstallAsync(depId);
             }
 
-            // Download and verify
-            var installerPath = await DownloadAsync(appId);
-            
+            // Download with cache support
+            var (installerPath, cacheHit) = await DownloadWithCacheAsync(appId);
+
+            if (cacheHit)
+            {
+                _logger.LogInformation("Using cached installer for {AppId}", appId);
+            }
+
             if (!await VerifyInstallerAsync(appId, installerPath))
             {
                 throw new InvalidOperationException($"Installer verification failed for {appId}");
@@ -377,6 +382,72 @@ namespace Better11.Core.Services
                 logger: _logger);
 
             return await Task.Run(() => manager.BuildInstallPlan(appId));
+        }
+
+        /// <summary>
+        /// Downloads an application installer with cache support.
+        /// </summary>
+        /// <param name="appId">Application identifier.</param>
+        /// <returns>Tuple of (path, cacheHit) where cacheHit indicates if cached file was used.</returns>
+        private async Task<(string Path, bool CacheHit)> DownloadWithCacheAsync(string appId)
+        {
+            var app = await GetAppAsync(appId);
+            if (app == null)
+            {
+                throw new ArgumentException($"Application not found: {appId}");
+            }
+
+            Directory.CreateDirectory(_downloadDir);
+
+            var fileName = Path.GetFileName(new Uri(app.Uri, UriKind.RelativeOrAbsolute).LocalPath);
+            var destinationPath = Path.Combine(_downloadDir, fileName);
+
+            // Check if file exists in cache
+            if (File.Exists(destinationPath))
+            {
+                try
+                {
+                    // Verify cached file
+                    if (await VerifyInstallerAsync(appId, destinationPath))
+                    {
+                        _logger.LogInformation("Using cached installer for {AppId} at {Path}", appId, destinationPath);
+                        return (destinationPath, true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Cached installer for {AppId} failed verification; redownloading", appId);
+                    File.Delete(destinationPath);
+                }
+            }
+
+            // Download fresh copy
+            _logger.LogInformation("Downloading {Name} from {Uri}", app.Name, app.Uri);
+
+            // Handle local/relative URIs (for samples)
+            if (!app.Uri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                var catalogDir = Path.GetDirectoryName(_catalogPath) ?? ".";
+                var sourcePath = Path.Combine(catalogDir, app.Uri);
+
+                if (File.Exists(sourcePath))
+                {
+                    File.Copy(sourcePath, destinationPath, overwrite: true);
+                    _logger.LogInformation("Copied local file to {Path}", destinationPath);
+                    return (destinationPath, false);
+                }
+            }
+
+            // Download from URL
+            using var response = await _httpClient.GetAsync(app.Uri);
+            response.EnsureSuccessStatusCode();
+
+            using var stream = await response.Content.ReadAsStreamAsync();
+            using var fileStream = File.Create(destinationPath);
+            await stream.CopyToAsync(fileStream);
+
+            _logger.LogInformation("Downloaded to {Path}", destinationPath);
+            return (destinationPath, false);
         }
     }
 }
