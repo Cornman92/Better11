@@ -15,6 +15,7 @@ public class AppManager
     private readonly DownloadVerifier _verifier;
     private readonly InstallerRunner _runner;
     private readonly InstallationStateStore _stateStore;
+    private readonly InstallationHistoryStore _historyStore;
     private readonly ILogger<AppManager>? _logger;
 
     public AppManager(
@@ -25,17 +26,20 @@ public class AppManager
         DownloadVerifier? verifier = null,
         InstallerRunner? runner = null,
         ILogger<AppManager>? logger = null,
-        TimeSpan? cacheExpiration = null)
+        TimeSpan? cacheExpiration = null,
+        string? historyFile = null)
     {
         _cachedCatalog = new CachedAppCatalog(catalogPath, cacheExpiration);
         var catalogDir = Path.GetDirectoryName(catalogPath) ?? Directory.GetCurrentDirectory();
         downloadDir ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".better11", "downloads");
         stateFile ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".better11", "installed.json");
+        historyFile ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".better11", "history.json");
 
         _downloader = downloader ?? new AppDownloader(downloadDir, catalogDir, logger);
         _verifier = verifier ?? new DownloadVerifier();
         _runner = runner ?? new InstallerRunner();
         _stateStore = new InstallationStateStore(stateFile);
+        _historyStore = new InstallationHistoryStore(historyFile);
         _logger = logger;
     }
 
@@ -133,6 +137,9 @@ public class AppManager
             throw new DependencyException($"Circular dependency detected at {appId}");
         }
         visited.Add(appId);
+
+        var startTime = DateTime.Now;
+        var entryId = Guid.NewGuid().ToString();
 
         try
         {
@@ -236,6 +243,27 @@ public class AppManager
                 installerPath,
                 dependencyStatuses.Keys.ToList());
 
+            // Record successful installation in history
+            var duration = DateTime.Now - startTime;
+            _historyStore.RecordEvent(new InstallationHistoryEntry
+            {
+                EntryId = entryId,
+                AppId = app.AppId,
+                AppName = app.Name,
+                Version = app.Version,
+                EventType = InstallationEventType.Install,
+                Timestamp = DateTime.Now,
+                Success = result.ReturnCode == 0,
+                ErrorMessage = result.ReturnCode != 0 ? result.Stderr : null,
+                UserName = Environment.UserName,
+                Duration = duration,
+                Metadata = new Dictionary<string, string>
+                {
+                    { "InstallerPath", installerPath },
+                    { "ReturnCode", result.ReturnCode.ToString() }
+                }
+            });
+
             progress?.Report(new OperationProgress
             {
                 AppId = appId,
@@ -247,6 +275,28 @@ public class AppManager
 
             return (status, result);
         }
+        catch (Exception ex)
+        {
+            // Record failed installation in history
+            var duration = DateTime.Now - startTime;
+            var app = _cachedCatalog.Contains(appId) ? _cachedCatalog.Get(appId) : null;
+
+            _historyStore.RecordEvent(new InstallationHistoryEntry
+            {
+                EntryId = entryId,
+                AppId = appId,
+                AppName = app?.Name ?? appId,
+                Version = app?.Version ?? "unknown",
+                EventType = InstallationEventType.Install,
+                Timestamp = DateTime.Now,
+                Success = false,
+                ErrorMessage = ex.Message,
+                UserName = Environment.UserName,
+                Duration = duration
+            });
+
+            throw;
+        }
         finally
         {
             visited.Remove(appId);
@@ -257,18 +307,68 @@ public class AppManager
     {
         ValidationHelper.ValidateAppId(appId, nameof(appId));
 
-        EnsureNotRequiredByDependents(appId);
-        var status = _stateStore.Get(appId);
-        if (status == null || !status.Installed)
-        {
-            throw new DependencyException($"{appId} is not currently installed");
-        }
+        var startTime = DateTime.Now;
+        var entryId = Guid.NewGuid().ToString();
 
-        var app = _catalog.Get(appId);
-        var installerPath = !string.IsNullOrEmpty(status.InstallerPath) ? status.InstallerPath : null;
-        var result = _runner.Uninstall(app, installerPath);
-        _stateStore.MarkUninstalled(appId);
-        return result;
+        try
+        {
+            EnsureNotRequiredByDependents(appId);
+            var status = _stateStore.Get(appId);
+            if (status == null || !status.Installed)
+            {
+                throw new DependencyException($"{appId} is not currently installed");
+            }
+
+            var app = _cachedCatalog.Get(appId);
+            var installerPath = !string.IsNullOrEmpty(status.InstallerPath) ? status.InstallerPath : null;
+            var result = _runner.Uninstall(app, installerPath);
+            _stateStore.MarkUninstalled(appId);
+
+            // Record successful uninstallation in history
+            var duration = DateTime.Now - startTime;
+            _historyStore.RecordEvent(new InstallationHistoryEntry
+            {
+                EntryId = entryId,
+                AppId = app.AppId,
+                AppName = app.Name,
+                Version = status.Version,
+                EventType = InstallationEventType.Uninstall,
+                Timestamp = DateTime.Now,
+                Success = result.ReturnCode == 0,
+                ErrorMessage = result.ReturnCode != 0 ? result.Stderr : null,
+                UserName = Environment.UserName,
+                Duration = duration,
+                Metadata = new Dictionary<string, string>
+                {
+                    { "ReturnCode", result.ReturnCode.ToString() }
+                }
+            });
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            // Record failed uninstallation in history
+            var duration = DateTime.Now - startTime;
+            var app = _cachedCatalog.Contains(appId) ? _cachedCatalog.Get(appId) : null;
+            var status = _stateStore.Get(appId);
+
+            _historyStore.RecordEvent(new InstallationHistoryEntry
+            {
+                EntryId = entryId,
+                AppId = appId,
+                AppName = app?.Name ?? appId,
+                Version = status?.Version ?? "unknown",
+                EventType = InstallationEventType.Uninstall,
+                Timestamp = DateTime.Now,
+                Success = false,
+                ErrorMessage = ex.Message,
+                UserName = Environment.UserName,
+                Duration = duration
+            });
+
+            throw;
+        }
     }
 
     private void EnsureNotRequiredByDependents(string appId)
@@ -759,6 +859,48 @@ public class AppManager
         }
 
         return preview;
+    }
+
+    /// <summary>
+    /// Queries installation history with optional filters.
+    /// </summary>
+    public List<InstallationHistoryEntry> GetHistory(InstallationHistoryFilter? filter = null)
+    {
+        return _historyStore.Query(filter);
+    }
+
+    /// <summary>
+    /// Gets installation history summary for a specific app.
+    /// </summary>
+    public InstallationHistorySummary? GetHistorySummary(string appId)
+    {
+        ValidationHelper.ValidateAppId(appId, nameof(appId));
+        return _historyStore.GetSummary(appId);
+    }
+
+    /// <summary>
+    /// Gets all apps that have been tracked in history.
+    /// </summary>
+    public List<string> GetTrackedApps()
+    {
+        return _historyStore.GetTrackedApps();
+    }
+
+    /// <summary>
+    /// Clears history entries older than the specified date.
+    /// </summary>
+    public int ClearOldHistory(DateTime olderThan)
+    {
+        return _historyStore.ClearOldHistory(olderThan);
+    }
+
+    /// <summary>
+    /// Clears all history for a specific app.
+    /// </summary>
+    public int ClearAppHistory(string appId)
+    {
+        ValidationHelper.ValidateAppId(appId, nameof(appId));
+        return _historyStore.ClearAppHistory(appId);
     }
 }
 
